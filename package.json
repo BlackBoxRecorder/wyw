@@ -28,6 +28,10 @@
     "bin/",
     "README.md"
   ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/BlackBoxRecorder/wyw"
+  },
   "keywords": [
     "文言文",
     "classical-chinese",
