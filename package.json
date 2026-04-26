@@ -1,6 +1,6 @@
 {
   "name": "wenyanwen",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "文言文标记语言编译器 - 将 .wyw 文件编译为排版精美的 HTML 页面",
   "type": "module",
   "main": "./dist/index.js",
@@ -25,6 +25,7 @@
   },
   "files": [
     "dist/",
+    "docs/",
     "bin/",
     "README.md"
   ],
