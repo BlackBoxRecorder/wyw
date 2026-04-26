@@ -1,4 +1,4 @@
-# 文言文标记语言编译器 (mobai 墨白)
+# 文言文标记语言编译器
 
 将 `.wyw` 文件编译为排版精美的 HTML 页面，支持注音、注释、译文等文言文阅读辅助功能。
 
@@ -59,8 +59,6 @@ npm test
 # 编译示例文件
 npm run build:examples
 
-# 构建站点首页
-npm run build:site
 ```
 
 
