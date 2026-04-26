@@ -1,6 +1,19 @@
 # 文言文标记语言编译器
 
-将 `.wyw` 文件编译为排版精美的 HTML 页面，支持注音、注释、译文等文言文阅读辅助功能。
+> 将 `.wyw` 文件编译为排版精美的 HTML 页面，支持注音、注释、译文等文言文阅读辅助功能。
+
+编写一个 `.wyw` 文件(loushiming.wyw)如下：
+![wyw](/docs/images/wyw.png)
+
+运行：
+```bash
+npx wyw build loushiming.wyw
+```
+
+生成 HTML 如下：
+
+![render](/docs/images/render.png)
+
 
 ## 功能特性
 
