@@ -9,6 +9,7 @@
 - **现代文翻译**：段落对照式译文展示
 - **明暗主题**：支持自动/浅色/深色主题切换
 - **诗词围栏**：专门的诗词排版支持
+- **字体缩放**：支持标准/中号/大号三种字号
 
 ## 安装
 
@@ -43,6 +44,26 @@ node bin/wyw.js build examples/*.wyw -o examples/dist/
 | `--no-show-translation` | 默认隐藏译文 | `--no-show-translation` |
 
 
+### 开发命令
+
+```bash
+# 编译 TypeScript 源码
+npm run build
+
+# 监听模式编译
+npm run dev
+
+# 运行测试
+npm test
+
+# 编译示例文件
+npm run build:examples
+
+# 构建站点首页
+npm run build:site
+```
+
+
 ### 创建模板
 
 快速创建一个 `.wyw` 模板文件：
@@ -56,20 +77,38 @@ node bin/wyw.js init
 
 ## 标记语法简介
 
+| 语法 | 用途 | 示例 |
+|------|------|------|
+| `---` | Frontmatter 分隔 / 分隔线 | `---\ntitle: 陋室铭\n---` |
+| `#` `##` `###` | 标题 | `# 一级标题` |
+| `>>` | 现代文翻译 | `>> 现代汉语翻译` |
+| `>` | 引用 | `> 引用内容` |
+| `:::` | 诗词围栏块 | `::: poetry\n诗词内容\n:::` |
+| `:: text` | 围栏元信息 | `:: [唐]李白` |
+| `{字\|拼音}` | 注音 | `{仙\|xiān}` |
+| `[词](释义)` | 注释 | `[陋室](简陋的屋子)` |
+| `[{字\|拼音}](释义)` | 注音+注释 | `[{晓\|xiǎo}](天刚亮的时候)` |
+| `*文本*` | 着重 | `*强调*` |
+| `---`（3+ 连字符） | 分隔线 | `---` |
+| `--YYYY年M月D日--` | 校对日期 | `--2024年1月15日--` |
+
 详细语法说明请参阅 [docs/syntax-guide.md](docs/syntax-guide.md)。
 
 ## 项目结构
 
 ```
-wenyanwen/
+mobai/
 ├── bin/wyw.js          # CLI 入口
 ├── src/
-│   ├── cli.js          # 命令行逻辑
-│   ├── index.js        # 编译器主入口
-│   ├── parser/         # 解析器
-│   └── renderer/       # HTML 渲染器
+│   ├── cli.ts          # 命令行逻辑
+│   ├── index.ts        # 编译器主入口
+│   ├── parser/         # 解析器（ast, block-parser, inline-parser, frontmatter）
+│   ├── renderer/       # HTML 渲染器（html-renderer, page-template）
+│   ├── templates/      # Handlebars 模板（page, homepage）
+│   └── assets/         # 静态资源（CSS, JS, 图标）
 ├── docs/               # 文档
-└── test/               # 测试
+├── test/               # 测试
+└── examples/           # 示例 .wyw 文件
 ```
 
 ## 许可证

@@ -12,6 +12,7 @@ import { fileURLToPath } from "node:url";
 import { Command } from "commander";
 import { compile } from "./index.js";
 import type { CompileOptions } from "./index.js";
+import { validate, formatValidationResult } from "./validator.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ASSETS_DIR = join(__dirname, "assets");
@@ -85,6 +86,28 @@ dynasty: 朝代
       const outPath = resolve("template.wyw");
       writeFileSync(outPath, template, "utf-8");
       console.log(`已创建模板文件: ${outPath}`);
+    });
+
+  program
+    .command("validate")
+    .description("验证 .wyw 文件格式")
+    .argument("<file>", ".wyw 文件路径")
+    .option("--strict", "将所有提示升级为错误", false)
+    .action((file: string, options: { strict: boolean }) => {
+      try {
+        const filePath = resolve(file);
+        const source = readFileSync(filePath, "utf-8");
+        const result = validate(source, {
+          strict: options.strict,
+          filePath,
+        });
+        console.log(formatValidationResult(result));
+        process.exit(result.errors.length > 0 ? 1 : 0);
+      } catch (err) {
+        console.error(`无法读取文件: ${file}`);
+        console.error(`  ${(err as Error).message}`);
+        process.exit(1);
+      }
     });
 
   return program;
