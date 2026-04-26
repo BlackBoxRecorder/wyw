@@ -5,7 +5,7 @@ description: Write, edit, and validate .wyw (文言文标记语言) files for cl
 
 # WYW Writer — 文言文标记语言编写与校验
 
-This project implements `.wyw`, a markdown-like markup language for classical Chinese texts. A `.wyw` source file compiles via `wyw build` into a well-typeset HTML page with ruby pinyin, annotations, translations, and poetry layout.
+`.wyw` is a markdown-like markup language for classical Chinese texts. A `.wyw` source file compiles via `npx wyw build` into a well-typeset HTML page with ruby pinyin, annotations, translations, and poetry layout.
 
 ## Quick Start
 
@@ -18,26 +18,18 @@ Use the [examples.md](examples.md) for complete reference when composing .wyw co
 title: 文章标题
 author: 作者
 dynasty: 朝代
-source: 出处
-layout: ancient
 ---
 
-正文内容，{注音|pīn yīn}标注生僻字，[生词](词语释义)添加注释。
-
+正文内容，{注|pīn}{音|yīn}标注生僻字，[生词](词语释义)添加注释。
 >> 现代汉语翻译文本
+
 ```
 
 ### Compiling
 
 ```bash
 # Compile a single .wyw file into HTML
-node bin/wyw.js build path/to/file.wyw
-
-# Compile with inline CSS/JS (self-contained HTML)
-node bin/wyw.js build path/to/file.wyw --inline
-
-# Watch mode
-node bin/wyw.js build path/to/file.wyw --watch
+npx wyw build path/to/file.wyw
 ```
 
 ### Validating
@@ -45,7 +37,7 @@ node bin/wyw.js build path/to/file.wyw --watch
 Always validate after writing or editing .wyw content:
 
 ```bash
-node skill/wyw-writer/scripts/validate.js path/to/file.wyw
+npx wyw validate path/to/file.wyw
 ```
 
 The validator checks:
@@ -60,8 +52,7 @@ The validator checks:
 1. **Determine content type**: prose (paragraph + translation) or poetry (`::: poetry`)
 2. **Write frontmatter**: always include `title`, `author`, `dynasty` at minimum
 3. **Write body**: use the syntax patterns below
-4. **Validate**: run `validate.js` after every edit
-5. **Compile and preview**: run `wyw build` and open the HTML
+4. **Validate**: run `npx wyw validate path/to/file.wyw` after every edit
 
 ## Syntax Reference
 
@@ -72,12 +63,10 @@ The validator checks:
 title: 文章标题
 author: 作者
 dynasty: 朝代
-source: 出处
-layout: ancient
 ---
 ```
 
-Supported fields: `title`, `author`, `dynasty`, `source`, `layout` (default: `ancient`).
+Supported fields: `title`, `author`, `dynasty`.
 
 ### Block-Level Markup
 
@@ -88,7 +77,6 @@ Supported fields: `title`, `author`, `dynasty`, `source`, `layout` (default: `an
 | `>` | Blockquote | `> 孔子曰：...` |
 | `---` | Section break / thematic break | `---` |
 | `::: poetry ... :::` | Poetry fenced block | See below |
-| `--YYYY 年 M 月 D 日--` | Proofread date | `--2024 年 1 月 15 日--` |
 
 **Poetry block structure:**
 ```
@@ -156,10 +144,9 @@ When writing or editing, manually check:
 - [ ] All `*text*` pairs are complete
 - [ ] `::: poetry` has matching `:::`
 - [ ] Each prose paragraph has a `>>` translation (if translations intended)
-- [ ] Pinyin uses standard lowercase letters with tone marks (āáǎàōóǒòēéěèīíǐìūúǔùǖǘǚǜ)
+- [ ] Pinyin uses standard lowercase letters with tone marks
 
 ## Additional Resources
 
 - For the complete syntax guide, see [reference.md](reference.md)
 - For annotated writing examples, see [examples.md](examples.md)
-- Validator script: [scripts/validate.js](scripts/validate.js)

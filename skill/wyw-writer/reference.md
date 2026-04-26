@@ -19,8 +19,6 @@
 title: 陋室铭
 author: 刘禹锡
 dynasty: 唐
-source: 全唐文
-layout: ancient
 ---
 ```
 
@@ -31,8 +29,6 @@ layout: ancient
 | `title` | 推荐 | `""` | 文章标题 |
 | `author` | 推荐 | `""` | 作者姓名 |
 | `dynasty` | 推荐 | `""` | 所属朝代 |
-| `source` | 可选 | `""` | 出处来源 |
-| `layout` | 可选 | `"ancient"` | 布局样式 |
 
 ### 解析规则
 
@@ -52,36 +48,12 @@ layout: ancient
 | 优先级 | 行首标记 | 节点类型 | 说明 |
 |--------|----------|----------|------|
 | 1 | `---`（3+连字符） | `section_break` | 分隔线 |
-| 2 | `--YYYY 年 M 月 D 日--` | `proofread_date` | 校对日期 |
-| 3 | `#` / `##` / `###` | `heading` | 标题 1-3 级 |
-| 4 | `:::` | `poetry_block` | 围栏块开始 |
-| 5 | `>>` | `translation` | 现代文翻译 |
-| 6 | `>`（非 `>>`） | `blockquote` | 引用块 |
-| 7 | 其他非空行 | `paragraph` | 普通段落 |
+| 2 | `#` / `##` / `###` | `heading` | 标题 1-3 级 |
+| 3 | `:::` | `poetry_block` | 围栏块开始 |
+| 4 | `>>` | `translation` | 现代文翻译 |
+| 5 | `>`（非 `>>`） | `blockquote` | 引用块 |
+| 6 | 其他非空行 | `paragraph` | 普通段落 |
 
-### 状态转换图
-
-```
-IDLE --普通行--> IN_PARAGRAPH
-IDLE -->> 行--> IN_TRANSLATION
-IDLE --> 行--> IN_BLOCKQUOTE
-IDLE --::: 行--> IN_FENCED
-
-IN_PARAGRAPH --空行--> flush + IDLE
-IN_PARAGRAPH -->> 行--> flush段落 + IN_TRANSLATION
-IN_PARAGRAPH --普通行--> 继续累积
-
-IN_TRANSLATION -->> 行--> 继续累积
-IN_TRANSLATION --其他--> flush译文 + 回退行 + IDLE
-
-IN_FENCED --::: --> flush围栏 + IDLE
-IN_FENCED --# 标题(首行)--> 记录围栏标题
-IN_FENCED --:: 元信息--> 记录围栏元信息
-IN_FENCED --其他--> 累积为诗词行
-
-IN_BLOCKQUOTE --> 行--> 继续累积
-IN_BLOCKQUOTE --其他--> flush引用 + 回退行 + IDLE
-```
 
 ### 1. 标题 (heading)
 
@@ -126,15 +98,10 @@ IN_BLOCKQUOTE --其他--> flush引用 + 回退行 + IDLE
 
 三个或更多连字符独占一行。正文中的 `---` 是分隔线；文件开头的 `---` 是 frontmatter 标记。
 
-### 6. 校对日期 (proofread_date)
-
-```
---2024 年 1 月 15 日--
-```
 
 严格匹配 `--\d{4} 年 \d{1,2} 月 \d{1,2} 日--` 格式。
 
-### 7. 诗词围栏块 (poetry_block)
+### 6. 诗词围栏块 (poetry_block)
 
 ```
 ::: poetry
@@ -184,7 +151,6 @@ IN_BLOCKQUOTE --其他--> flush引用 + 回退行 + IDLE
 - 竖线左侧为汉字，右侧为拼音
 - 拼音用小写 + Unicode 声调符号
 - 拼音中不可含 `{` `}` 字符
-- HTML: `<ruby>仙<rp>(</rp><rt>xiān</rt><rp>)</rp></ruby>`
 
 ### 2. 注释 — `[词](释义)`
 
@@ -194,7 +160,6 @@ IN_BLOCKQUOTE --其他--> flush引用 + 回退行 + IDLE
 
 - 方括号内为注释对象，圆括号内为释义
 - 释义不可跨行
-- HTML: `<span class="wyw-annotate" data-note="简陋的屋子">陋室</span>`
 
 ### 3. 注音+注释（单字） — `[{字|拼音}](释义)`
 
@@ -203,7 +168,6 @@ IN_BLOCKQUOTE --其他--> flush引用 + 回退行 + IDLE
 ```
 
 - 单字同时需要注音和注释时使用
-- HTML: `<ruby><span class="wyw-annotate" data-note="...">晓</span><rt>xiǎo</rt></ruby>`
 
 ### 4. 注音+注释（多字） — `[{字|拼音}{字}...](释义)`
 
@@ -231,56 +195,5 @@ IN_BLOCKQUOTE --其他--> flush引用 + 回退行 + IDLE
 
 `paragraph` 和紧跟的 `translation` 合并为 `paragraph_group`：
 
-```
-解析结果: [paragraph("A"), translation("译A"), paragraph("B")]
-分组结果: [paragraph_group(paragraph("A"), translation("译A")), paragraph_group(paragraph("B"), null)]
-```
 
 ---
-
-## AST 节点类型
-
-### Block 节点
-
-| 类型 | 属性 |
-|------|------|
-| `document` | `meta`, `children` |
-| `heading` | `level` (1-3), `children` |
-| `paragraph` | `children` |
-| `translation` | `children` |
-| `paragraph_group` | `paragraph`, `translation` |
-| `poetry_block` | `title`, `meta`, `lines` |
-| `blockquote` | `children` |
-| `section_break` | — |
-| `proofread_date` | `date` |
-
-### Inline 节点
-
-| 类型 | 属性 |
-|------|------|
-| `text` | `value` |
-| `ruby` | `base`, `annotation` |
-| `annotate` | `text`, `note` |
-| `ruby_annotate` | `items[]`, `note` |
-| `emphasis` | `children` |
-
----
-
-## HTML 渲染映射
-
-| AST 类型 | HTML 输出 |
-|----------|-----------|
-| `heading` N | `<h{N+1}>...</h{N+1}>` |
-| `paragraph_group` | `<div class="wyw-para-group"><p>...</p><p class="wyw-translation">...</p></div>` |
-| `poetry_block` | `<div class="wyw-poetry"><h1>...</h1><p class="wyw-verse">...</p></div>` |
-| `blockquote` | `<blockquote><p>...</p></blockquote>` |
-| `section_break` | `<hr class="wyw-hr">` |
-| `proofread_date` | `<footer class="wyw-proofread">校对于：...</footer>` |
-
-| Inline AST | HTML |
-|------------|------|
-| `text` | 转义纯文本 |
-| `ruby` | `<ruby>字<rp>(</rp><rt>拼音</rt><rp>)</rp></ruby>` |
-| `annotate` | `<span class="wyw-annotate" data-note="释义">词</span>` |
-| `ruby_annotate` | `<ruby><span class="wyw-annotate" data-note="释义">...</span><rp>(</rp><rt>拼音</rt><rp>)</rp></ruby>` |
-| `emphasis` | `<em>...</em>` |
