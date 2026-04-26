@@ -5,22 +5,24 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { loadTemplate, Handlebars } from "../templates/index.js";
+import type { DocumentMeta } from "../parser/ast.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ASSETS_DIR = join(__dirname, "..", "assets");
 
+export interface RenderPageOptions {
+  meta: DocumentMeta;
+  body: string;
+  inline?: boolean;
+  assetsPath?: string;
+  theme?: string;
+  showTranslation?: boolean;
+}
+
 /**
  * 生成完整的 HTML 页面
- * @param {Object} options
- * @param {Object} options.meta - 文档元数据
- * @param {string} options.body - 渲染后的 HTML body 内容
- * @param {boolean} [options.inline=false] - 是否内联 CSS/JS
- * @param {string} [options.assetsPath=''] - CSS/JS 资源路径前缀
- * @param {string} [options.theme='auto'] - 默认主题
- * @param {boolean} [options.showTranslation=true] - 默认显示译文
- * @returns {string}
  */
-export function renderPage(options) {
+export function renderPage(options: RenderPageOptions): string {
   const {
     meta,
     body,
@@ -36,7 +38,7 @@ export function renderPage(options) {
 
   const articleClasses = `wyw wyw--ancient wyw--annotation${showTranslation ? "" : " wyw--hide-translation"}`;
 
-  let cssTag, jsTag;
+  let cssTag: string, jsTag: string;
 
   if (inline) {
     const css = readFileSync(join(ASSETS_DIR, "wyw.css"), "utf-8");
@@ -59,7 +61,7 @@ export function renderPage(options) {
   });
 }
 
-function stripWywMarkup(text) {
+function stripWywMarkup(text: string): string {
   if (!text) return "";
   // 先剥离注音标记 {字|拼音}
   text = text.replace(/\{([^|{}]+)\|([^}]+)\}/g, "$1");
@@ -70,7 +72,7 @@ function stripWywMarkup(text) {
   return text;
 }
 
-function escapeHtml(text) {
+function escapeHtml(text: string): string {
   return text
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")

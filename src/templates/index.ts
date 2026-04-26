@@ -10,16 +10,15 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const TEMPLATES_DIR = __dirname;
 
 // 缓存已编译的模板
-const templateCache = new Map();
+const templateCache = new Map<string, Handlebars.TemplateDelegate>();
 
 /**
  * 加载并编译 Handlebars 模板
- * @param {string} name - 模板名称（不含 .hbs 扩展名）
- * @returns {Function} - 编译后的模板函数
  */
-export function loadTemplate(name) {
-  if (templateCache.has(name)) {
-    return templateCache.get(name);
+export function loadTemplate(name: string): Handlebars.TemplateDelegate {
+  const cached = templateCache.get(name);
+  if (cached) {
+    return cached;
   }
 
   const templatePath = join(TEMPLATES_DIR, `${name}.hbs`);

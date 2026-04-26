@@ -11,11 +11,20 @@ import { resolve, basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { Command } from "commander";
 import { compile } from "./index.js";
+import type { CompileOptions } from "./index.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ASSETS_DIR = join(__dirname, "assets");
 
-export function createCli() {
+interface BuildOptions {
+  output?: string;
+  inline: boolean;
+  watch: boolean;
+  theme: string;
+  showTranslation: boolean;
+}
+
+export function createCli(): Command {
   const program = new Command();
 
   program.name("wyw").description("文言文标记语言编译器").version("0.1.0");
@@ -30,7 +39,7 @@ export function createCli() {
     .option("--theme <mode>", "默认主题 (auto/light/dark)", "auto")
     .option("--show-translation", "默认显示译文", true)
     .option("--no-show-translation", "默认隐藏译文")
-    .action((files, options) => {
+    .action((files: string[], options: BuildOptions) => {
       buildFiles(files, options);
 
       if (options.watch) {
@@ -57,11 +66,11 @@ dynasty: 朝代
 
 # 标题
 
-正文内容，可使用{注音|zhù yīn}标注，[生词](词语解释)注释。
+正文内容，可使用{注|zhù}{音|yīn}标注，[生词](词语解释)注释。
 
 >> 现代汉语翻译文本
 
-第二段正文，支持*着重标记*和_专有名词_标注。
+第二段正文，支持*着重标记*标注。
 
 >> 第二段翻译
 
@@ -81,7 +90,7 @@ dynasty: 朝代
   return program;
 }
 
-function buildFiles(files, options) {
+function buildFiles(files: string[], options: BuildOptions): void {
   for (const file of files) {
     try {
       const filePath = resolve(file);
@@ -121,12 +130,16 @@ function buildFiles(files, options) {
         `  ${htmlName} (${stats.paragraphs} 段, ${stats.annotations} 注释, ${stats.rubies} 注音)`,
       );
     } catch (err) {
-      console.error(`  ${basename(file)}: ${err.message}`);
+      console.error(`  ${basename(file)}: ${(err as Error).message}`);
     }
   }
 }
 
-function collectStats(source) {
+function collectStats(source: string): {
+  paragraphs: number;
+  annotations: number;
+  rubies: number;
+} {
   const annotations = (source.match(/\[[^\]]+\]\([^)]+\)/g) || []).length;
   const rubies = (source.match(/\{[^|{}]+\|[^}]+\}/g) || []).length;
   const paragraphs = source.split("\n\n").filter((block) => {

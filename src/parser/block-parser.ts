@@ -12,22 +12,35 @@ import {
   createDocument,
   createProofreadDate,
 } from "./ast.js";
+import type {
+  DocumentNode,
+  BlockNode,
+  RawBlockNode,
+  InlineNode,
+  PoetryHeading,
+  PoetryLine,
+} from "./ast.js";
 import { parseInline } from "./inline-parser.js";
 import { parseFrontmatter } from "./frontmatter.js";
 
 // 状态常量
-const IDLE = "IDLE";
-const IN_PARAGRAPH = "IN_PARAGRAPH";
-const IN_TRANSLATION = "IN_TRANSLATION";
-const IN_FENCED = "IN_FENCED";
-const IN_BLOCKQUOTE = "IN_BLOCKQUOTE";
+type ParserState =
+  | "IDLE"
+  | "IN_PARAGRAPH"
+  | "IN_TRANSLATION"
+  | "IN_FENCED"
+  | "IN_BLOCKQUOTE";
+
+const IDLE: ParserState = "IDLE";
+const IN_PARAGRAPH: ParserState = "IN_PARAGRAPH";
+const IN_TRANSLATION: ParserState = "IN_TRANSLATION";
+const IN_FENCED: ParserState = "IN_FENCED";
+const IN_BLOCKQUOTE: ParserState = "IN_BLOCKQUOTE";
 
 /**
  * 解析完整的 .wyw 源文件
- * @param {string} source - .wyw 文件内容
- * @returns {Object} - Document AST 节点
  */
-export function parse(source) {
+export function parse(source: string): DocumentNode {
   const { meta, body } = parseFrontmatter(source);
   const lines = body.split("\n");
   const blocks = parseBlocks(lines);
@@ -55,33 +68,30 @@ export function parse(source) {
  * 2. 根据当前状态和行内容决定如何处理
  * 3. 使用 buffer 累积多行内容，遇到边界时 flush 生成节点
  * 4. 文件末尾时 flush 所有未处理的内容
- *
- * @param {string[]} lines - 按行分割的文本数组
- * @returns {Object[]} - 块级 AST 节点数组
  */
-function parseBlocks(lines) {
+function parseBlocks(lines: string[]): RawBlockNode[] {
   // blocks: 存储最终生成的所有块级 AST 节点
-  const blocks = [];
+  const blocks: RawBlockNode[] = [];
 
   // state: 当前解析状态，决定如何处理每一行
-  let state = IDLE;
+  let state: ParserState = IDLE;
 
   // buffer: 临时缓冲区，用于累积多行内容（段落、译文、引用、围栏块等）
-  let buffer = [];
+  let buffer: Array<string | PoetryHeading> = [];
 
   // 围栏块相关变量
   let fencedType = ""; // 围栏块类型（如 poetry）
-  let fencedMeta = null; // 围栏块元信息（:: 开头的行）
-  let fencedTitle = null; // 围栏块标题（# 开头的行）
+  let fencedMeta: string | null = null; // 围栏块元信息（:: 开头的行）
+  let fencedTitle: InlineNode[] | null = null; // 围栏块标题（# 开头的行）
 
   /**
    * 刷新段落缓冲区
    * 将 buffer 中累积的文本合并为单个字符串，创建 paragraph 节点
    * 使用 parseInline 对文本进行内联解析（处理注音、注释等）
    */
-  function flushParagraph() {
+  function flushParagraph(): void {
     if (buffer.length > 0) {
-      const text = buffer.join("");
+      const text = (buffer as string[]).join("");
       blocks.push(createParagraph(parseInline(text)));
       buffer = [];
     }
@@ -92,9 +102,9 @@ function parseBlocks(lines) {
    * 将 buffer 中累积的译文文本合并，创建 translation 节点
    * 译文以 >> 开头，用于现代汉语翻译
    */
-  function flushTranslation() {
+  function flushTranslation(): void {
     if (buffer.length > 0) {
-      const text = buffer.join("");
+      const text = (buffer as string[]).join("");
       blocks.push(createTranslation(parseInline(text)));
       buffer = [];
     }
@@ -105,9 +115,9 @@ function parseBlocks(lines) {
    * 将 buffer 中累积的引用文本合并，创建 blockquote 节点
    * 引用以 > 开头（但不包括 >> 译文）
    */
-  function flushBlockquote() {
+  function flushBlockquote(): void {
     if (buffer.length > 0) {
-      const text = buffer.join("");
+      const text = (buffer as string[]).join("");
       blocks.push(createBlockquote(parseInline(text)));
       buffer = [];
     }
@@ -118,12 +128,12 @@ function parseBlocks(lines) {
    * 将 buffer 中的每一行分别进行内联解析，创建 poetry_block 节点
    * 围栏块用于诗词等特殊格式，每行独立解析保留换行结构
    */
-  function flushFenced() {
-    const poetryLines = buffer.map((line) => {
-      if (line && line.type === "heading") {
+  function flushFenced(): void {
+    const poetryLines: PoetryLine[] = buffer.map((line) => {
+      if (typeof line === "object" && line.type === "heading") {
         return line;
       }
-      return parseInline(line);
+      return parseInline(line as string);
     });
     blocks.push(createPoetryBlock(fencedTitle, fencedMeta, poetryLines));
     buffer = [];
@@ -333,8 +343,8 @@ function parseBlocks(lines) {
 /**
  * 将相邻的 paragraph + translation 合并为 paragraph_group
  */
-function groupParagraphs(blocks) {
-  const result = [];
+function groupParagraphs(blocks: RawBlockNode[]): BlockNode[] {
+  const result: BlockNode[] = [];
 
   for (let i = 0; i < blocks.length; i++) {
     const block = blocks[i];

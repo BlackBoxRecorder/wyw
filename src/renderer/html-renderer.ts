@@ -2,14 +2,23 @@
 // 遍历 AST 节点树，生成 HTML 字符串
 
 import { parseInline } from "../parser/inline-parser.js";
+import type {
+  DocumentNode,
+  DocumentMeta,
+  BlockNode,
+  HeadingNode,
+  ParagraphGroupNode,
+  PoetryBlockNode,
+  PoetryHeading,
+  PoetryLine,
+  InlineNode,
+} from "../parser/ast.js";
 
 /**
  * 将 Document AST 渲染为 HTML body 内容
- * @param {Object} doc - Document AST 节点
- * @returns {string} - HTML 字符串
  */
-export function renderBody(doc) {
-  const parts = [];
+export function renderBody(doc: DocumentNode): string {
+  const parts: string[] = [];
 
   // 检查文档是否包含带标题的诗词块
   const hasPoetryWithTitle = doc.children.some(
@@ -34,8 +43,8 @@ export function renderBody(doc) {
   return parts.join("\n");
 }
 
-function renderHeader(meta) {
-  const lines = ['<header class="wyw-header">'];
+function renderHeader(meta: DocumentMeta): string {
+  const lines: string[] = ['<header class="wyw-header">'];
 
   if (meta.title) {
     lines.push(`  <h1>${renderInlineList(parseInline(meta.title))}</h1>`);
@@ -60,7 +69,7 @@ function renderHeader(meta) {
   return lines.join("\n");
 }
 
-function renderToolbar() {
+function renderToolbar(): string {
   return `<nav class="wyw-toolbar" role="toolbar">
   <button class="wyw-btn wyw-btn--translation" aria-pressed="true" title="显示/隐藏译文">译</button>
   <button class="wyw-btn wyw-btn--fontsize" title="字体大小">字</button>
@@ -68,16 +77,12 @@ function renderToolbar() {
 </nav>`;
 }
 
-function renderBlock(block) {
+function renderBlock(block: BlockNode): string {
   switch (block.type) {
     case "heading":
       return renderHeading(block);
     case "paragraph_group":
       return renderParagraphGroup(block);
-    case "paragraph":
-      return `<p>${renderInlineList(block.children)}</p>`;
-    case "translation":
-      return `<p class="wyw-translation">${renderInlineList(block.children)}</p>`;
     case "poetry_block":
       return renderPoetryBlock(block);
     case "blockquote":
@@ -91,13 +96,13 @@ function renderBlock(block) {
   }
 }
 
-function renderHeading(block) {
+function renderHeading(block: HeadingNode): string {
   const tag = `h${block.level + 1}`; // h1 留给标题，正文标题从 h2 开始
   return `<${tag}>${renderInlineList(block.children)}</${tag}>`;
 }
 
-function renderParagraphGroup(block) {
-  const lines = ['<div class="wyw-para-group">'];
+function renderParagraphGroup(block: ParagraphGroupNode): string {
+  const lines: string[] = ['<div class="wyw-para-group">'];
 
   if (block.paragraph) {
     lines.push(`  <p>${renderInlineList(block.paragraph.children)}</p>`);
@@ -113,8 +118,12 @@ function renderParagraphGroup(block) {
   return lines.join("\n");
 }
 
-function renderPoetryBlock(block) {
-  const lines = ['<div class="wyw-poetry">'];
+type PoetrySegment =
+  | { type: "verse"; lines: InlineNode[][] }
+  | { type: "heading"; level: number; content: InlineNode[] };
+
+function renderPoetryBlock(block: PoetryBlockNode): string {
+  const lines: string[] = ['<div class="wyw-poetry">'];
 
   if (block.title) {
     lines.push(
@@ -129,11 +138,13 @@ function renderPoetryBlock(block) {
   }
 
   // 将 lines 按 heading 分段，每段 verse 单独用 <p> 包裹
-  const segments = [];
-  let currentSegment = [];
+  const segments: PoetrySegment[] = [];
+  let currentSegment: InlineNode[][] = [];
 
   for (const line of block.lines) {
-    if (line && line.type === "heading") {
+    if (Array.isArray(line)) {
+      currentSegment.push(line);
+    } else if (line.type === "heading") {
       if (currentSegment.length > 0) {
         segments.push({ type: "verse", lines: currentSegment });
         currentSegment = [];
@@ -143,8 +154,6 @@ function renderPoetryBlock(block) {
         level: line.level,
         content: line.content,
       });
-    } else {
-      currentSegment.push(line);
     }
   }
 
@@ -178,12 +187,12 @@ function renderPoetryBlock(block) {
 
 // === Inline 渲染 ===
 
-function renderInlineList(nodes) {
+function renderInlineList(nodes: InlineNode[] | null): string {
   if (!nodes) return "";
   return nodes.map(renderInline).join("");
 }
 
-function renderInline(node) {
+function renderInline(node: InlineNode): string {
   switch (node.type) {
     case "text":
       return escapeHtml(node.value);
@@ -225,14 +234,14 @@ function renderInline(node) {
 
 // === 工具函数 ===
 
-function escapeHtml(text) {
+function escapeHtml(text: string): string {
   return text
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;");
 }
 
-function escapeAttr(text) {
+function escapeAttr(text: string): string {
   return text
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")

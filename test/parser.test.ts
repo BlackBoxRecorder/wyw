@@ -4,6 +4,16 @@ import { parseFrontmatter } from "../src/parser/frontmatter.js";
 import { parseInline } from "../src/parser/inline-parser.js";
 import { parse } from "../src/parser/block-parser.js";
 import { compile } from "../src/index.js";
+import type {
+  TextNode,
+  RubyNode,
+  AnnotateNode,
+  EmphasisNode,
+  RubyAnnotateNode,
+  ParagraphGroupNode,
+  HeadingNode,
+  PoetryBlockNode,
+} from "../src/parser/ast.js";
 
 // === Frontmatter 测试 ===
 describe("parseFrontmatter", () => {
@@ -46,28 +56,31 @@ describe("parseInline", () => {
     const nodes = parseInline("有{仙|xiān}则名");
     assert.equal(nodes.length, 3);
     assert.equal(nodes[0].type, "text");
-    assert.equal(nodes[0].value, "有");
+    assert.equal((nodes[0] as TextNode).value, "有");
     assert.equal(nodes[1].type, "ruby");
-    assert.equal(nodes[1].base, "仙");
-    assert.equal(nodes[1].annotation, "xiān");
+    assert.equal((nodes[1] as RubyNode).base, "仙");
+    assert.equal((nodes[1] as RubyNode).annotation, "xiān");
     assert.equal(nodes[2].type, "text");
-    assert.equal(nodes[2].value, "则名");
+    assert.equal((nodes[2] as TextNode).value, "则名");
   });
 
   it("解析注释 [词](释义)", () => {
     const nodes = parseInline("[斯](这)是陋室");
     assert.equal(nodes.length, 2);
     assert.equal(nodes[0].type, "annotate");
-    assert.equal(nodes[0].text, "斯");
-    assert.equal(nodes[0].note, "这");
+    assert.equal((nodes[0] as AnnotateNode).text, "斯");
+    assert.equal((nodes[0] as AnnotateNode).note, "这");
     assert.equal(nodes[1].type, "text");
-    assert.equal(nodes[1].value, "是陋室");
+    assert.equal((nodes[1] as TextNode).value, "是陋室");
   });
 
   it("解析着重 *文本*", () => {
     const nodes = parseInline("*危急存亡*之秋");
     assert.equal(nodes[0].type, "emphasis");
-    assert.equal(nodes[0].children[0].value, "危急存亡");
+    assert.equal(
+      ((nodes[0] as EmphasisNode).children[0] as TextNode).value,
+      "危急存亡",
+    );
     assert.equal(nodes[1].type, "text");
   });
 
@@ -75,30 +88,32 @@ describe("parseInline", () => {
     const nodes = parseInline("春眠不觉[{晓|xiǎo}](天刚亮的时候)");
     assert.equal(nodes.length, 2);
     assert.equal(nodes[0].type, "text");
-    assert.equal(nodes[0].value, "春眠不觉");
+    assert.equal((nodes[0] as TextNode).value, "春眠不觉");
     assert.equal(nodes[1].type, "ruby_annotate");
-    assert.equal(nodes[1].items.length, 1);
-    assert.equal(nodes[1].items[0].base, "晓");
-    assert.equal(nodes[1].items[0].annotation, "xiǎo");
-    assert.equal(nodes[1].note, "天刚亮的时候");
+    const ra = nodes[1] as RubyAnnotateNode;
+    assert.equal(ra.items.length, 1);
+    assert.equal(ra.items[0].base, "晓");
+    assert.equal(ra.items[0].annotation, "xiǎo");
+    assert.equal(ra.note, "天刚亮的时候");
   });
 
   it("解析注音+注释组合（多字） [{字|拼音}{字}...](释义)", () => {
     const nodes = parseInline("[{穹|qióng}{庐}](游牧民族居住的圆顶毡帐)");
     assert.equal(nodes.length, 1);
     assert.equal(nodes[0].type, "ruby_annotate");
-    assert.equal(nodes[0].items.length, 2);
-    assert.equal(nodes[0].items[0].base, "穹");
-    assert.equal(nodes[0].items[0].annotation, "qióng");
-    assert.equal(nodes[0].items[1].base, "庐");
-    assert.equal(nodes[0].items[1].annotation, null);
-    assert.equal(nodes[0].note, "游牧民族居住的圆顶毡帐");
+    const ra = nodes[0] as RubyAnnotateNode;
+    assert.equal(ra.items.length, 2);
+    assert.equal(ra.items[0].base, "穹");
+    assert.equal(ra.items[0].annotation, "qióng");
+    assert.equal(ra.items[1].base, "庐");
+    assert.equal(ra.items[1].annotation, null);
+    assert.equal(ra.note, "游牧民族居住的圆顶毡帐");
   });
 
   it("解析注音+注释组合（复杂多字）", () => {
     const nodes = parseInline("[{邺|ye}{城}{戍|shù}](邺城服役)");
     assert.equal(nodes.length, 1);
-    const ra = nodes[0];
+    const ra = nodes[0] as RubyAnnotateNode;
     assert.equal(ra.type, "ruby_annotate");
     assert.equal(ra.items.length, 3);
     assert.equal(ra.items[0].base, "邺");
@@ -127,7 +142,7 @@ describe("parseInline", () => {
   it("普通注释不受注音+注释组合影响", () => {
     const nodes = parseInline("[陋室](简陋的屋子)");
     assert.equal(nodes[0].type, "annotate");
-    assert.equal(nodes[0].text, "陋室");
+    assert.equal((nodes[0] as AnnotateNode).text, "陋室");
   });
 
   it("混合解析多种内联语法", () => {
@@ -141,7 +156,7 @@ describe("parseInline", () => {
     const nodes = parseInline("山不在高");
     assert.equal(nodes.length, 1);
     assert.equal(nodes[0].type, "text");
-    assert.equal(nodes[0].value, "山不在高");
+    assert.equal((nodes[0] as TextNode).value, "山不在高");
   });
 
   it("空文本", () => {
@@ -167,8 +182,9 @@ author: 作者
     assert.equal(doc.meta.title, "测试");
     assert.equal(doc.children.length, 1);
     assert.equal(doc.children[0].type, "paragraph_group");
-    assert.ok(doc.children[0].paragraph);
-    assert.ok(doc.children[0].translation);
+    const group = doc.children[0] as ParagraphGroupNode;
+    assert.ok(group.paragraph);
+    assert.ok(group.translation);
   });
 
   it("段落与译文正确配对", () => {
@@ -183,9 +199,9 @@ author: 作者
     const doc = parse(source);
     assert.equal(doc.children.length, 2);
     assert.equal(doc.children[0].type, "paragraph_group");
-    assert.ok(doc.children[0].translation);
+    assert.ok((doc.children[0] as ParagraphGroupNode).translation);
     assert.equal(doc.children[1].type, "paragraph_group");
-    assert.ok(doc.children[1].translation);
+    assert.ok((doc.children[1] as ParagraphGroupNode).translation);
   });
 
   it("无译文的段落", () => {
@@ -193,16 +209,16 @@ author: 作者
     const doc = parse(source);
     assert.equal(doc.children.length, 1);
     assert.equal(doc.children[0].type, "paragraph_group");
-    assert.equal(doc.children[0].translation, null);
+    assert.equal((doc.children[0] as ParagraphGroupNode).translation, null);
   });
 
   it("解析标题", () => {
     const source = "# 标题一\n\n## 标题二";
     const doc = parse(source);
     assert.equal(doc.children[0].type, "heading");
-    assert.equal(doc.children[0].level, 1);
+    assert.equal((doc.children[0] as HeadingNode).level, 1);
     assert.equal(doc.children[1].type, "heading");
-    assert.equal(doc.children[1].level, 2);
+    assert.equal((doc.children[1] as HeadingNode).level, 2);
   });
 
   it("解析分隔线", () => {
@@ -229,12 +245,11 @@ author: 作者
 
     const doc = parse(source);
     assert.equal(doc.children[0].type, "poetry_block");
+    const poetry = doc.children[0] as PoetryBlockNode;
     // title 是 parseInline 返回的内联节点数组
-    assert.deepEqual(doc.children[0].title, [
-      { type: "text", value: "赠汪伦" },
-    ]);
-    assert.equal(doc.children[0].meta, "[唐]李白");
-    assert.ok(doc.children[0].lines.length > 0);
+    assert.deepEqual(poetry.title, [{ type: "text", value: "赠汪伦" }]);
+    assert.equal(poetry.meta, "[唐]李白");
+    assert.ok(poetry.lines.length > 0);
   });
 });
 

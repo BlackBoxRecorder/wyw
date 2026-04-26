@@ -12,8 +12,8 @@ const MAITANWENG_FILE = resolve(__dirname, "demo/白居易_卖炭翁.wyw");
 const SHENSHENGMAN_FILE = resolve(__dirname, "demo/李清照_声声慢·寻寻觅觅.wyw");
 
 describe("compile 刘禹锡_陋室铭.wyw", () => {
-  let source;
-  let html;
+  let source: string;
+  let html: string;
 
   before(() => {
     source = readFileSync(DEMO_FILE, "utf-8");
@@ -94,8 +94,8 @@ describe("compile 刘禹锡_陋室铭.wyw", () => {
 });
 
 describe("compile 白居易_卖炭翁.wyw", () => {
-  let source;
-  let html;
+  let source: string;
+  let html: string;
 
   before(() => {
     source = readFileSync(MAITANWENG_FILE, "utf-8");
@@ -155,8 +155,8 @@ describe("compile 白居易_卖炭翁.wyw", () => {
 });
 
 describe("compile 李清照_声声慢·寻寻觅觅.wyw", () => {
-  let source;
-  let html;
+  let source: string;
+  let html: string;
 
   before(() => {
     source = readFileSync(SHENSHENGMAN_FILE, "utf-8");

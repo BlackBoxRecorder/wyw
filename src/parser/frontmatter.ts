@@ -1,17 +1,21 @@
 // YAML Frontmatter 解析器
 // 提取 --- 之间的键值对元数据
 
+import type { DocumentMeta } from "./ast.js";
+
+export interface ParseFrontmatterResult {
+  meta: DocumentMeta;
+  body: string;
+}
+
 /**
  * 解析 .wyw 文件的 frontmatter 部分
- * @param {string} source - 完整的 .wyw 源文本
- * @returns {{ meta: Object, body: string }}
  */
-export function parseFrontmatter(source) {
-  const defaultMeta = {
+export function parseFrontmatter(source: string): ParseFrontmatterResult {
+  const defaultMeta: DocumentMeta = {
     title: "",
     author: "",
     dynasty: "",
-    source: "",
   };
 
   const trimmed = source.trimStart();
@@ -31,14 +35,20 @@ export function parseFrontmatter(source) {
   const body = trimmed.slice(endIndex + 4).trim(); // 跳过 \n---
 
   // 简单的 YAML 键值解析（不支持嵌套）
-  const meta = { ...defaultMeta };
+  const meta: DocumentMeta = { ...defaultMeta };
   for (const line of yamlBlock.split("\n")) {
     const colonIndex = line.indexOf(":");
     if (colonIndex === -1) continue;
     const key = line.slice(0, colonIndex).trim();
     const value = line.slice(colonIndex + 1).trim();
-    if (key && value) {
-      meta[key] = value;
+    if (key === "title") {
+      meta.title = value;
+    }
+    if (key === "author") {
+      meta.author = value;
+    }
+    if (key === "dynasty") {
+      meta.dynasty = value;
     }
   }
 
