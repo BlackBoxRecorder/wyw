@@ -121,6 +121,7 @@ describe("validate - Bracket Balance", () => {
       ),
       false,
     );
+    assert.equal(result.errors.length, 0);
   });
 
   it("着重标记未成对报提示", () => {
@@ -159,6 +160,7 @@ describe("validate - Ruby Format", () => {
       ),
       false,
     );
+    assert.equal(result.errors.length, 0);
   });
 });
 
@@ -176,6 +178,7 @@ describe("validate - Annotate Format", () => {
       result.errors.some((e) => e.msg.includes("词条为空")),
       false,
     );
+    assert.equal(result.errors.length, 0);
   });
 
   it("含有注音的文本不误匹配为注释", () => {
@@ -233,6 +236,7 @@ dynasty: 唐
       result.errors.some((e) => e.msg.includes("无有效注音块")),
       false,
     );
+    assert.equal(result.errors.length, 0);
   });
 
   it("组合内拼音含数字报提示", () => {
