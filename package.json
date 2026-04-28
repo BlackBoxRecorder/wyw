@@ -1,6 +1,6 @@
 {
   "name": "wenyanwen",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "文言文标记语言编译器 - 将 .wyw 文件编译为排版精美的 HTML 页面",
   "type": "module",
   "main": "./dist/index.js",
@@ -17,7 +17,7 @@
   },
   "scripts": {
     "postinstall": "cp node_modules/heti/umd/heti-addon.min.js src/assets/ 2>/dev/null || true",
-    "build": "tsc && npm run build:assets && cp src/templates/*.hbs dist/templates/",
+    "build": "rm -rf dist && tsc && npm run build:assets && cp src/templates/*.hbs dist/templates/",
     "build:assets": "mkdir -p dist/assets && cp src/assets/*.css src/assets/*.js src/assets/*.png dist/assets/",
     "build:examples": "npm run build && node bin/wyw.js build examples/*.wyw -o examples/dist",
     "build:site": "node web/build.js",
