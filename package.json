@@ -1,6 +1,6 @@
 {
   "name": "wyw",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "文言文标记语言编译器 - 将 .wyw 文件编译为排版精美的 HTML 页面",
   "type": "module",
   "main": "./dist/index.js",
