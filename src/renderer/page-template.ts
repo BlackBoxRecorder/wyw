@@ -41,13 +41,19 @@ export function renderPage(options: RenderPageOptions): string {
   let cssTag: string, jsTag: string;
 
   if (inline) {
+    const hetiCss = readFileSync(join(ASSETS_DIR, "heti.css"), "utf-8");
     const css = readFileSync(join(ASSETS_DIR, "wyw.css"), "utf-8");
+    cssTag = `<style>\n${hetiCss}\n${css}\n</style>`;
+
+    const hetiAddonJs = readFileSync(
+      join(ASSETS_DIR, "heti-addon.min.js"),
+      "utf-8",
+    );
     const js = readFileSync(join(ASSETS_DIR, "wyw.js"), "utf-8");
-    cssTag = `<style>\n${css}\n</style>`;
-    jsTag = `<script>\n${js}\n</script>`;
+    jsTag = `<script>\n${hetiAddonJs}\n${js}\n</script>`;
   } else {
-    cssTag = `<link rel="stylesheet" href="${assetsPath}wyw.css">`;
-    jsTag = `<script src="${assetsPath}wyw.js"></script>`;
+    cssTag = `<link rel="stylesheet" href="${assetsPath}heti.css">\n  <link rel="stylesheet" href="${assetsPath}wyw.css">`;
+    jsTag = `<script src="${assetsPath}heti-addon.min.js"></script>\n  <script src="${assetsPath}wyw.js"></script>`;
   }
 
   const template = loadTemplate("page");

@@ -23,9 +23,9 @@
   --wyw-grid-unit: calc(var(--wyw-font-size) * var(--wyw-line-height));
 
   /* 字体 */
-  --wyw-font-song: "Noto Serif SC", "Source Han Serif SC", "Source Han Serif", "Songti SC", "SimSun", serif;
-  --wyw-font-kai: "KaiTi", "STKaiti", "AR PL UKai CN", "FangSong", serif;
-  --wyw-font-hei: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+  --wyw-font-song: "Heti Song", "Noto Serif SC", "Source Han Serif SC", "Source Han Serif", "Songti SC", "SimSun", serif;
+  --wyw-font-kai: "Heti Kai", "KaiTi", "STKaiti", "AR PL UKai CN", "FangSong", serif;
+  --wyw-font-hei: "Heti Hei", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", sans-serif;
   --wyw-font-pinyin: "Helvetica Neue", Helvetica, Arial, sans-serif;
 
   /* 颜色 - 浅色主题 */
@@ -142,6 +142,10 @@ body {
   font-size: var(--wyw-font-size-small);
   color: var(--wyw-color-text-light);
   letter-spacing: 0.1em;
+}
+
+.wyw-meta .wyw-dynasty {
+  font-family: var(--wyw-font-kai);
 }
 
 .wyw-meta .wyw-dynasty::after {

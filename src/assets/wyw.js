@@ -14,6 +14,7 @@
     bindThemeToggle();
     bindTooltipPositioning(article);
     bindKeyboardShortcuts(article);
+    initHetiAddon(article);
   }
 
   // === 偏好恢复 ===
@@ -162,6 +163,17 @@
       el.setAttribute("data-tooltip-align", "right");
     } else {
       el.removeAttribute("data-tooltip-align");
+    }
+  }
+
+  // === heti-addon 标点挤压 + 中西文间距 ===
+  function initHetiAddon(article) {
+    if (typeof Heti === "undefined") return;
+    try {
+      var heti = new Heti();
+      heti.spacingElement(article);
+    } catch (e) {
+      // 静默失败，不影响页面正常显示
     }
   }
 

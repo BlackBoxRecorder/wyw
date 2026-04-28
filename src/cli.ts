@@ -137,7 +137,12 @@ function buildFiles(files: string[], options: BuildOptions): void {
 
       // 非内联模式时复制 CSS 和 JS
       if (!options.inline) {
+        copyFileSync(join(ASSETS_DIR, "heti.css"), join(outputDir, "heti.css"));
         copyFileSync(join(ASSETS_DIR, "wyw.css"), join(outputDir, "wyw.css"));
+        copyFileSync(
+          join(ASSETS_DIR, "heti-addon.min.js"),
+          join(outputDir, "heti-addon.min.js"),
+        );
         copyFileSync(join(ASSETS_DIR, "wyw.js"), join(outputDir, "wyw.js"));
       }
 

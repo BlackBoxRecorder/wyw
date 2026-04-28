@@ -1,0 +1,179 @@
+/* ============================================================
+   heti 排版增强样式
+   提取自 heti (赫蹏) v0.9.6 — https://github.com/sivan/heti
+   ============================================================ */
+
+/* === @font-face 字体族定义 ===
+   来源: heti/lib/fonts/
+   提供跨平台统一的中文字体匹配 */
+
+/* --- Heti Song 宋体 --- */
+
+/* Regular */
+@font-face {
+  font-family: "Heti Song";
+  src:
+    local("Songti SC Regular"),
+    local("Songti TC Regular"),
+    local("SimSun");
+}
+
+/* Light */
+@font-face {
+  font-family: "Heti Song";
+  font-weight: 200;
+  src:
+    local("Songti SC Light"),
+    local("Songti TC Light");
+}
+
+/* Bold */
+@font-face {
+  font-family: "Heti Song";
+  font-weight: 600;
+  src:
+    local("Songti SC Bold"),
+    local("Songti TC Bold");
+}
+
+/* Black */
+@font-face {
+  font-family: "Heti Song Black";
+  font-weight: 800;
+  src:
+    local("Songti SC Black"),
+    local("SimSun");
+}
+
+/* --- Heti Kai 楷体 --- */
+
+/* Regular */
+@font-face {
+  font-family: "Heti Kai";
+  src:
+    local("Kaiti SC Regular"),
+    local("Kaiti TC Regular"),
+    local("STKaiti"),
+    local("Kaiti"),
+    local("BiauKai");
+}
+
+/* Bold */
+@font-face {
+  font-family: "Heti Kai";
+  font-weight: 600;
+  src:
+    local("Kaiti SC Bold"),
+    local("Kaiti TC Bold");
+}
+
+/* Black */
+@font-face {
+  font-family: "Heti Kai Black";
+  font-weight: 800;
+  src:
+    local("Kaiti SC Black"),
+    local("Kaiti TC Black"),
+    local("STKaiti"),
+    local("Kaiti");
+}
+
+/* --- Heti Hei 黑体 --- */
+
+/* Regular */
+@font-face {
+  font-family: "Heti Hei";
+  src:
+    local("PingFang SC Regular"),
+    local("Heiti SC Regular"),
+    local("Microsoft YaHei"),
+    local("Source Han Sans CN Regular"),
+    local("Noto Sans CJK SC Regular"),
+    local("WenQuanYi Micro Hei"),
+    local("Droid Sans Fallback");
+}
+
+/* Light */
+@font-face {
+  font-family: "Heti Hei";
+  font-weight: 200;
+  src:
+    local("PingFang SC Light"),
+    local("Heiti SC Light"),
+    local("Source Han Sans CN Light"),
+    local("Noto Sans CJK SC Light");
+}
+
+/* Bold */
+@font-face {
+  font-family: "Heti Hei";
+  font-weight: 600;
+  src:
+    local("PingFang SC Medium"),
+    local("Heiti SC Medium"),
+    local("Microsoft YaHei Bold"),
+    local("Source Han Sans CN Bold"),
+    local("Noto Sans CJK SC Bold");
+}
+
+/* Black */
+@font-face {
+  font-family: "Heti Hei Black";
+  font-weight: 800;
+  src:
+    local("Lantinghei SC Heavy"),
+    local("PingFang SC Semibold"),
+    local("Heiti SC Medium"),
+    local("Source Han Sans CN Heavy"),
+    local("Noto Sans CJK SC Heavy");
+}
+
+/* === heti-addon CSS 工具类 ===
+   来源: heti/lib/helpers/_add-on.scss
+   配合 heti-addon.js 运行时标点挤压和中西文间距使用 */
+
+/* 中西文混排间距 */
+heti-spacing {
+  display: inline;
+}
+
+heti-spacing + sup,
+heti-spacing + sub {
+  margin-inline-start: 0;
+}
+
+.heti-spacing-start {
+  margin-inline-end: 0.25em;
+}
+
+.heti-spacing-end {
+  margin-inline-start: 0.25em;
+}
+
+/* 标点挤压 */
+heti-adjacent {
+  display: inline;
+  unicode-bidi: isolate;
+}
+
+.heti-adjacent-half {
+  margin-inline-end: -0.5em;
+}
+
+.heti-adjacent-quarter {
+  margin-inline-end: -0.25em;
+}
+
+/* === 基础排版增强 ===
+   来源: heti/lib/_base.scss, heti/lib/_inline.scss
+   作用于 .wyw 作用域内，不与现有样式冲突 */
+
+/* 连续带划线/标注元素间增加微小间隙，防止视觉粘连 */
+.wyw abbr[title],
+.wyw del,
+.wyw ins,
+.wyw s,
+.wyw u {
+  margin-inline-start: 1px;
+  margin-inline-end: 1px;
+}
