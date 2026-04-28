@@ -101,99 +101,269 @@ function checkFrontmatter(lines: string[], v: Validator) {
   return { endLine, fields };
 }
 
-// ---- 规则 2: 括号匹配检查 ----
+// ---- 规则 2: 括号匹配检查（栈式结构检测） ----
 function checkBracketBalance(lines: string[], v: Validator) {
+  const PAIRS: Record<string, string> = { "}": "{", "]": "[", ")": "(" };
+  const OPEN = new Set(["{", "[", "("]);
+  const CLOSE = new Set(["}", "]", ")"]);
+
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
-    let lBrace = 0,
-      rBrace = 0;
-    let lBrack = 0,
-      rBrack = 0;
-    let lParen = 0,
-      rParen = 0;
+    const stack: Array<{ char: string; col: number }> = [];
     let stars = 0;
 
-    for (const ch of line) {
-      if (ch === "{") lBrace++;
-      if (ch === "}") rBrace++;
-      if (ch === "[") lBrack++;
-      if (ch === "]") rBrack++;
-      if (ch === "(") lParen++;
-      if (ch === ")") rParen++;
+    for (let col = 0; col < line.length; col++) {
+      const ch = line[col];
+
+      if (OPEN.has(ch)) {
+        stack.push({ char: ch, col });
+      } else if (CLOSE.has(ch)) {
+        const expected = PAIRS[ch];
+        if (stack.length === 0) {
+          v.error(
+            i + 1,
+            `第${col + 1}列: 多余的闭合括号 '${ch}'（无对应开括号）`,
+          );
+        } else {
+          const top = stack[stack.length - 1];
+          if (top.char !== expected) {
+            const expectedClose =
+              top.char === "{" ? "}" : top.char === "[" ? "]" : ")";
+            v.error(
+              i + 1,
+              `第${col + 1}列: 括号交叉嵌套，'${ch}' 应出现在 '${expectedClose}' 之前（与第${top.col + 1}列的 '${top.char}' 不匹配）`,
+            );
+          }
+          stack.pop();
+        }
+      }
+
       if (ch === "*") stars++;
     }
 
-    if (lBrace !== rBrace) {
-      v.error(i + 1, `大括号不匹配: {${lBrace}个 vs }${rBrace}个`);
+    // 报告未闭合的开括号
+    for (const item of stack) {
+      const expectedClose =
+        item.char === "{" ? "}" : item.char === "[" ? "]" : ")";
+      v.error(
+        i + 1,
+        `第${item.col + 1}列: '${item.char}' 未闭合，缺少 '${expectedClose}'`,
+      );
     }
-    if (lBrack !== rBrack) {
-      v.warn(i + 1, `方括号不匹配: [${lBrack}个 vs ]${rBrack}个`);
-    }
-    if (lParen !== rParen) {
-      v.warn(i + 1, `圆括号不匹配: (${lParen}个 vs )${rParen}个`);
-    }
+
     if (stars % 2 !== 0) {
       v.warn(i + 1, `着重标记 '*' 未成对（${stars}个）`);
     }
   }
 }
 
-// ---- 规则 3: 注音格式检查 ----
-function checkRubyFormat(lines: string[], v: Validator) {
-  const rubyRegex = /\{([^|{}]+)\|([^}]+)\}/g;
+// ---- 规则 3: 模式感知语法校验 ----
+// 按 inline-parser 优先级顺序提取三种语法模式并逐项校验
 
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    let match: RegExpExecArray | null;
-    while ((match = rubyRegex.exec(line)) !== null) {
-      const base = match[1];
-      const pinyin = match[2];
+interface SyntaxPattern {
+  type: "ruby" | "annotate" | "ruby_annotate";
+  fullMatch: string;
+  line: number;
+  col: number;
+  base?: string;
+  pinyin?: string;
+  text?: string;
+  note?: string;
+  innerBlocks?: string; // ruby_annotate 内层 {...} 序列
+}
 
-      if (!base.trim()) {
-        v.error(i + 1, `注音标记汉字为空: ${match[0]}`);
-      }
+// 注音校验: {字|拼音}
+function validateRubyPattern(p: SyntaxPattern, v: Validator) {
+  const base = p.base!;
+  const pinyin = p.pinyin!;
 
-      if (!pinyin.trim()) {
-        v.error(i + 1, `注音拼音为空: ${match[0]}`);
-      }
+  // base 不能为空
+  if (!base.trim()) {
+    v.error(p.line, `注音标记汉字为空: ${p.fullMatch}`);
+    return;
+  }
 
-      if (base.length > 1 && !v.strict) {
-        v.warn(i + 1, `注音标记疑似多字: ${match[0]}（建议单字分别标注）`);
-      }
-
-      if (/[0-9]/.test(pinyin)) {
-        v.warn(i + 1, `拼音包含数字: "${pinyin}"（建议使用 Unicode 声调符号）`);
-      }
-
-      if (/[{}]/.test(pinyin)) {
-        v.error(i + 1, `拼音包含非法字符 '{' 或 '}': ${match[0]}`);
-      }
+  // base 应为单字
+  if (base.length > 1) {
+    if (v.strict) {
+      v.error(p.line, `注音标记多字: ${p.fullMatch}（必须单字分别标注）`);
+    } else {
+      v.warn(p.line, `注音标记疑似多字: ${p.fullMatch}（建议单字分别标注）`);
     }
+  }
+
+  // pinyin 不能为空
+  if (!pinyin.trim()) {
+    v.error(p.line, `注音拼音为空: ${p.fullMatch}`);
+    return;
+  }
+
+  // pinyin 不能含数字
+  if (/[0-9]/.test(pinyin)) {
+    v.warn(
+      p.line,
+      `拼音包含数字: "${pinyin}"（建议使用 Unicode 声调符号，如 ā é ě è）`,
+    );
+  }
+
+  // pinyin 不能含大括号
+  if (/[{}]/.test(pinyin)) {
+    v.error(p.line, `拼音包含非法字符 '{' 或 '}': ${p.fullMatch}`);
   }
 }
 
-// ---- 规则 4: 注释格式检查 ----
-function checkAnnotateFormat(lines: string[], v: Validator) {
-  const annotateRegex = /\[([^\]]+)\]\(([^)]*)\)/g;
+// 注释校验: [文本](释义)
+function validateAnnotatePattern(p: SyntaxPattern, v: Validator) {
+  const text = p.text!;
+  const note = p.note!;
+
+  // text 不能为空
+  if (!text.trim()) {
+    v.error(p.line, `注释词条为空: ${p.fullMatch}`);
+  }
+
+  // 释义不能为空（警告）
+  if (!note.trim()) {
+    v.warn(p.line, `注释释义为空: ${p.fullMatch}`);
+  }
+}
+
+// 注音+注释组合校验: [{字|拼音}{字}...](释义)
+function validateRubyAnnotatePattern(p: SyntaxPattern, v: Validator) {
+  const inner = p.innerBlocks!;
+  const note = p.note!;
+
+  // 校验内部每个 {字|拼音} 块
+  const rubyItemRegex = /\{([^|{}]+)(?:\|([^}]+))?\}/g;
+  let itemCount = 0;
+  let itemMatch: RegExpExecArray | null;
+
+  while ((itemMatch = rubyItemRegex.exec(inner)) !== null) {
+    itemCount++;
+    const rBase = itemMatch[1];
+    const rPinyin = itemMatch[2] || "";
+
+    if (!rBase.trim()) {
+      v.error(
+        p.line,
+        `注音+注释组合中注音汉字为空: ${itemMatch[0]}（位于 ${p.fullMatch}）`,
+      );
+    } else if (rBase.length > 1) {
+      if (v.strict) {
+        v.error(
+          p.line,
+          `注音+注释组合中注音多字: ${itemMatch[0]}（位于 ${p.fullMatch}）`,
+        );
+      } else {
+        v.warn(
+          p.line,
+          `注音+注释组合中注音疑似多字: ${itemMatch[0]}（位于 ${p.fullMatch}）`,
+        );
+      }
+    }
+
+    if (rPinyin) {
+      if (/[0-9]/.test(rPinyin)) {
+        v.warn(p.line, `拼音包含数字: "${rPinyin}"（位于 ${p.fullMatch}）`);
+      }
+      if (/[{}]/.test(rPinyin)) {
+        v.error(
+          p.line,
+          `拼音包含非法字符: ${itemMatch[0]}（位于 ${p.fullMatch}）`,
+        );
+      }
+    }
+  }
+
+  if (itemCount === 0) {
+    v.error(p.line, `注音+注释组合内无有效注音块: ${p.fullMatch}`);
+  }
+
+  // 释义不能为空
+  if (!note.trim()) {
+    v.warn(p.line, `注音+注释组合释义为空: ${p.fullMatch}`);
+  }
+}
+
+// 模式感知提取与校验（替代原 checkRubyFormat + checkAnnotateFormat）
+function extractAndValidatePatterns(lines: string[], v: Validator) {
+  // 正则（与 inline-parser 优先级一致）
+  const RA_REGEX = /\[((?:\{[^}]+\})+)\]\(([^)]*)\)/g; // ruby_annotate 优先
+  const RUBY_REGEX = /\{([^|{}]+)\|([^}]+)\}/g;
+  const ANNO_REGEX = /\[([^\]]+)\]\(([^)]*)\)/g;
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
-    let match: RegExpExecArray | null;
-    while ((match = annotateRegex.exec(line)) !== null) {
-      const text = match[1];
-      const note = match[2];
+    const consumed: Array<[number, number]> = [];
 
-      if (text.includes("{") && text.includes("|") && !text.startsWith("{")) {
+    function isConsumed(start: number, end: number): boolean {
+      return consumed.some(([s, e]) => start >= s && start < e);
+    }
+
+    function markConsumed(start: number, end: number) {
+      consumed.push([start, end]);
+    }
+
+    // 第1遍: 提取 ruby_annotate（优先级最高）
+    let raMatch: RegExpExecArray | null;
+    while ((raMatch = RA_REGEX.exec(line)) !== null) {
+      if (isConsumed(raMatch.index, raMatch.index + raMatch[0].length))
         continue;
-      }
+      markConsumed(raMatch.index, raMatch.index + raMatch[0].length);
+      validateRubyAnnotatePattern(
+        {
+          type: "ruby_annotate",
+          fullMatch: raMatch[0],
+          line: i + 1,
+          col: raMatch.index + 1,
+          innerBlocks: raMatch[1],
+          note: raMatch[2],
+        },
+        v,
+      );
+    }
 
-      if (!text.trim()) {
-        v.error(i + 1, `注释词条为空: ${match[0]}`);
-      }
+    // 第2遍: 提取 ruby
+    let rubyMatch: RegExpExecArray | null;
+    while ((rubyMatch = RUBY_REGEX.exec(line)) !== null) {
+      if (isConsumed(rubyMatch.index, rubyMatch.index + rubyMatch[0].length))
+        continue;
+      markConsumed(rubyMatch.index, rubyMatch.index + rubyMatch[0].length);
+      validateRubyPattern(
+        {
+          type: "ruby",
+          fullMatch: rubyMatch[0],
+          line: i + 1,
+          col: rubyMatch.index + 1,
+          base: rubyMatch[1],
+          pinyin: rubyMatch[2],
+        },
+        v,
+      );
+    }
 
-      if (!note.trim()) {
-        v.warn(i + 1, `注释释义为空: ${match[0]}`);
-      }
+    // 第3遍: 提取 annotate（优先级最低，排除已消费区域）
+    let annoMatch: RegExpExecArray | null;
+    while ((annoMatch = ANNO_REGEX.exec(line)) !== null) {
+      if (isConsumed(annoMatch.index, annoMatch.index + annoMatch[0].length))
+        continue;
+      const text = annoMatch[1];
+
+      // 如果 text 包含 {..|..} 形式的 ruby 内容，说明应被第2遍匹配但没匹配到，跳过
+      if (/\{[^}]+\|[^}]+\}/.test(text)) continue;
+
+      markConsumed(annoMatch.index, annoMatch.index + annoMatch[0].length);
+      validateAnnotatePattern(
+        {
+          type: "annotate",
+          fullMatch: annoMatch[0],
+          line: i + 1,
+          col: annoMatch.index + 1,
+          text: annoMatch[1],
+          note: annoMatch[2],
+        },
+        v,
+      );
     }
   }
 }
@@ -328,8 +498,7 @@ export function validate(
 
   checkFrontmatter(lines, v);
   checkBracketBalance(lines, v);
-  checkRubyFormat(lines, v);
-  checkAnnotateFormat(lines, v);
+  extractAndValidatePatterns(lines, v);
   checkFencedBlocks(lines, v);
   checkTranslationPairing(lines, v);
   const stats = checkWithParser(source, v);

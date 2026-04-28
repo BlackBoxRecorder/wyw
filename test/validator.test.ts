@@ -83,21 +83,44 @@ unknown: 值
   });
 });
 
-// === 括号匹配检查 ===
+// === 括号匹配检查（栈式检测） ===
 describe("validate - Bracket Balance", () => {
-  it("大括号不匹配报错误", () => {
+  it("大括号未闭合报错误", () => {
     const result = validate("{未闭合");
-    assert.ok(result.errors.some((e) => e.msg.includes("大括号不匹配")));
+    assert.ok(result.errors.some((e) => e.msg.includes("未闭合")));
   });
 
-  it("方括号不匹配报提示", () => {
+  it("方括号未闭合报错误", () => {
     const result = validate("[未闭合");
-    assert.ok(result.warnings.some((w) => w.msg.includes("方括号不匹配")));
+    assert.ok(result.errors.some((e) => e.msg.includes("未闭合")));
   });
 
-  it("圆括号不匹配报提示", () => {
+  it("圆括号未闭合报错误", () => {
     const result = validate("(未闭合");
-    assert.ok(result.warnings.some((w) => w.msg.includes("圆括号不匹配")));
+    assert.ok(result.errors.some((e) => e.msg.includes("未闭合")));
+  });
+
+  it("括号交叉嵌套报错误（如 [{...} ）", () => {
+    const result = validate("[{词|pinyin}]"); // 正确写法，不报错
+    // 交叉嵌套: [{...}  其中 { 在 [ 后但 ] 先于 } 闭合 — 这是正确的
+    // 真正的交叉嵌套: {[...]} 类型交叉
+    const result2 = validate("{文[字}注释]");
+    assert.ok(result2.errors.some((e) => e.msg.includes("交叉嵌套")));
+  });
+
+  it("多余闭合括号报错误", () => {
+    const result = validate("文本}多余");
+    assert.ok(result.errors.some((e) => e.msg.includes("多余的闭合括号")));
+  });
+
+  it("正常嵌套不报错", () => {
+    const result = validate("[{词|yǔ}](注)");
+    assert.equal(
+      result.errors.some(
+        (e) => e.msg.includes("未闭合") || e.msg.includes("交叉嵌套"),
+      ),
+      false,
+    );
   });
 
   it("着重标记未成对报提示", () => {
@@ -106,11 +129,16 @@ describe("validate - Bracket Balance", () => {
   });
 });
 
-// === 注音格式检查 ===
+// === 注音格式检查（模式感知） ===
 describe("validate - Ruby Format", () => {
   it("多字注音报提示", () => {
     const result = validate("{汉字|hàn zì}");
     assert.ok(result.warnings.some((w) => w.msg.includes("多字")));
+  });
+
+  it("strict 模式下多字注音报错误", () => {
+    const result = validate("{汉字|hàn zì}", { strict: true });
+    assert.ok(result.errors.some((e) => e.msg.includes("多字")));
   });
 
   it("拼音含数字报提示", () => {
@@ -122,9 +150,19 @@ describe("validate - Ruby Format", () => {
     const result = validate("{字|z{i}");
     assert.ok(result.errors.some((e) => e.msg.includes("非法字符")));
   });
+
+  it("单字注音无错误", () => {
+    const result = validate("{字|zì}");
+    assert.equal(
+      result.errors.some(
+        (e) => e.msg.includes("多字") || e.msg.includes("非法字符"),
+      ),
+      false,
+    );
+  });
 });
 
-// === 注释格式检查 ===
+// === 注释格式检查（模式感知） ===
 describe("validate - Annotate Format", () => {
   it("空释义报提示", () => {
     const result = validate("[词]()");
@@ -138,6 +176,68 @@ describe("validate - Annotate Format", () => {
       result.errors.some((e) => e.msg.includes("词条为空")),
       false,
     );
+  });
+
+  it("含有注音的文本不误匹配为注释", () => {
+    // 如果 text 内含 {x|y}，应跳过注释匹配
+    const result = validate("[文{字|zì}本](释义)");
+    // 不会被提取为 annotate，不会报"词条为空"
+    const annoErrors = result.errors.filter(
+      (e) => e.msg.includes("词条为空") || e.msg.includes("释义为空"),
+    );
+    assert.equal(annoErrors.length, 0);
+  });
+});
+
+// === 注音+注释组合校验 ===
+describe("validate - Ruby Annotate Format", () => {
+  it("正常组合无错误", () => {
+    const source = `---
+title: 测试
+author: 作者
+dynasty: 唐
+---
+
+[{斯|sī}{是}{陋|lòu}{室}](这是简陋的屋子)`;
+    const result = validate(source);
+    assert.equal(
+      result.errors.some(
+        (e) =>
+          e.msg.includes("多字") ||
+          e.msg.includes("非法字符") ||
+          e.msg.includes("无有效"),
+      ),
+      false,
+    );
+  });
+
+  it("组合中多字注音报提示", () => {
+    const result = validate("[{汉字|hàn zì}](释义)");
+    assert.ok(result.warnings.some((w) => w.msg.includes("多字")));
+  });
+
+  it("strict 模式下组合中多字注音报错误", () => {
+    const result = validate("[{汉字|hàn zì}](释义)", { strict: true });
+    assert.ok(result.errors.some((e) => e.msg.includes("多字")));
+  });
+
+  it("组合释义为空报提示", () => {
+    const result = validate("[{字|zì}]()");
+    assert.ok(result.warnings.some((w) => w.msg.includes("释义为空")));
+  });
+
+  it("组合内无注音块报错误", () => {
+    const result = validate("[文字](释义)");
+    // 这是普通注释，不是 ruby_annotate，不应报"无有效注音块"
+    assert.equal(
+      result.errors.some((e) => e.msg.includes("无有效注音块")),
+      false,
+    );
+  });
+
+  it("组合内拼音含数字报提示", () => {
+    const result = validate("[{字|zi4}{词|ci2}](释义)");
+    assert.ok(result.warnings.some((w) => w.msg.includes("数字")));
   });
 });
 
