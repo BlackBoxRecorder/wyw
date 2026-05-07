@@ -1,5 +1,5 @@
 {
-  "name": "wyw",
+  "name": "@bbr/wyw",
   "version": "0.1.5",
   "description": "文言文标记语言编译器 - 将 .wyw 文件编译为排版精美的 HTML 页面",
   "type": "module",
@@ -12,11 +12,10 @@
     }
   },
   "bin": {
-    "wenyanwen": "./bin/wyw.js",
     "wyw": "./bin/wyw.js"
   },
   "scripts": {
-    "postinstall": "cp node_modules/heti/umd/heti-addon.min.js src/assets/ 2>/dev/null || true",
+    "prepare:assets": "cp node_modules/heti/umd/heti-addon.min.js src/assets/ 2>/dev/null || true",
     "build": "rm -rf dist && tsc && npm run build:assets && cp src/templates/*.hbs dist/templates/",
     "build:assets": "mkdir -p dist/assets && cp src/assets/*.css src/assets/*.js src/assets/*.png dist/assets/",
     "build:examples": "npm run build && node bin/wyw.js build examples/*.wyw -o examples/dist",
@@ -29,17 +28,33 @@
     "dist/",
     "docs/",
     "bin/",
-    "README.md"
+    "README.md",
+    "LICENSE"
   ],
   "repository": {
     "type": "git",
     "url": "https://github.com/BlackBoxRecorder/wyw"
   },
+  "homepage": "https://github.com/BlackBoxRecorder/wyw#readme",
+  "bugs": {
+    "url": "https://github.com/BlackBoxRecorder/wyw/issues"
+  },
+  "author": "BlackBoxRecorder",
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "keywords": [
     "文言文",
     "classical-chinese",
     "markup",
-    "typography"
+    "typography",
+    "wyw",
+    "cli",
+    "handlebars",
+    "ruby-annotation"
   ],
   "license": "MIT",
   "dependencies": {
