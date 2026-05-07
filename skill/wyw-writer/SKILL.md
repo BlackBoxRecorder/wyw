@@ -29,7 +29,7 @@ dynasty: 朝代
 
 ```bash
 # Compile a single .wyw file into HTML
-npx wyw build path/to/file.wyw
+npx @timetickme/wyw build path/to/file.wyw
 ```
 
 ### Validating
