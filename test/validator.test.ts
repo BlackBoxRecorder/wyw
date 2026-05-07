@@ -245,6 +245,56 @@ dynasty: 唐
   });
 });
 
+// === 注音后紧随括号检测 ===
+describe("validate - Ruby Bare Annotation", () => {
+  it("{字|拼音}(释义) 报警告", () => {
+    const source = `---
+title: 测试
+author: 作者
+dynasty: 唐
+---
+
+男有{分|fèn}(职分，职业)，女有{归|guī}(出嫁，指女子有归宿)。`;
+    const result = validate(source);
+    assert.ok(
+      result.warnings.some((w) => w.msg.includes("注音标记后紧跟括号")),
+    );
+    // 应检测到两处
+    const rubyBare = result.warnings.filter((w) =>
+      w.msg.includes("注音标记后紧跟括号"),
+    );
+    assert.equal(rubyBare.length, 2);
+  });
+
+  it("strict 模式下升级为错误", () => {
+    const result = validate("{分|fèn}(职分，职业)", { strict: true });
+    assert.ok(result.errors.some((e) => e.msg.includes("注音标记后紧跟括号")));
+    assert.equal(result.warnings.length, 0);
+  });
+
+  it("[{字|拼音}](释义) 正确组合不误报", () => {
+    const source = `---
+title: 测试
+author: 作者
+dynasty: 唐
+---
+
+[{分|fèn}](职分，职业)[{归|guī}](出嫁，指女子有归宿)`;
+    const result = validate(source);
+    const bareWarnings = result.warnings.filter((w) =>
+      w.msg.includes("注音标记后紧跟括号"),
+    );
+    assert.equal(bareWarnings.length, 0);
+  });
+
+  it("多字注音后跟括号也检测", () => {
+    const result = validate("{汉字|hàn zì}(释义)");
+    assert.ok(
+      result.warnings.some((w) => w.msg.includes("注音标记后紧跟括号")),
+    );
+  });
+});
+
 // === 诗词围栏块检查 ===
 describe("validate - Fenced Blocks", () => {
   it("围栏块未闭合报错误", () => {

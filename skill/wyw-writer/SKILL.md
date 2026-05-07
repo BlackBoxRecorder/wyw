@@ -37,7 +37,7 @@ npx @timetickme/wyw build path/to/file.wyw
 Always validate after writing or editing .wyw content:
 
 ```bash
-npx wyw validate path/to/file.wyw
+npx @timetickme/wyw validate path/to/file.wyw
 ```
 
 The validator checks:

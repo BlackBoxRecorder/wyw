@@ -5,9 +5,10 @@
  *   1. Frontmatter 完整性（元数据字段检查）
  *   2. 括号匹配（栈式结构检测，含成对大括号 {}、方括号 []、圆括号 ()）
  *   3. 模式感知语法校验（注音 {字|拼音}、注释 [文本](释义)、注音+注释组合）
- *   4. 诗词围栏块结构（:::poetry 起止配对）
- *   5. 译文配对（>> 译文行前必须有原文段落）
- *   6. 解析器深度校验（利用 block-parser 做 AST 级统计）
+ *   4. 注音后紧随括号检测（{字|拼音}(...) 遗漏方括号的格式）
+ *   5. 诗词围栏块结构（:::poetry 起止配对）
+ *   6. 译文配对（>> 译文行前必须有原文段落）
+ *   7. 解析器深度校验（利用 block-parser 做 AST 级统计）
  *
  * 提供两种使用方式：
  *   - 编程接口：调用 validate() 获取 ValidationResult
@@ -548,6 +549,35 @@ function extractAndValidatePatterns(lines: string[], v: Validator) {
 }
 
 /**
+ * ---- 规则 4: 注音后紧随括号检测 ----
+ *
+ * 检测 {字|拼音}(...) 格式：注音标记后直接跟圆括号内容，
+ * 通常意味着用户遗漏了方括号，正确写法应为 [{字|拼音}](...)。
+ *
+ * 使用负向后顾 (?<![) 排除已被方括号包裹的正确组合语法。
+ * 匹配到后用 warn 报告（strict 模式下升级为 error）。
+ *
+ * @param lines - 源码行数组
+ * @param v     - 校验器实例
+ */
+function checkRubyBareAnnotation(lines: string[], v: Validator) {
+  // 匹配 {字|拼音} 后紧跟 ( 的模式，但排除 [{字|拼音}] 的正确组合语法
+  const RUBY_PAREN_REGEX = /(?<!\[)\{([^|{}]+)\|([^}]+)\}\s*\(/g;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    let match: RegExpExecArray | null;
+
+    while ((match = RUBY_PAREN_REGEX.exec(line)) !== null) {
+      v.warn(
+        i + 1,
+        `注音标记后紧跟括号: '{${match[1]}|${match[2]}}…'，可能遗漏了方括号（应为 [{${match[1]}|${match[2]}}](...) 格式）`,
+      );
+    }
+  }
+}
+
+/**
  * ---- 规则 5: 诗词围栏块结构检查 ----
  *
  * 检测 `:::poetry` 围栏代码块的起止配对情况：
@@ -745,9 +775,10 @@ function checkWithParser(
  *   1. checkFrontmatter       — Frontmatter 完整性
  *   2. checkBracketBalance    — 括号匹配
  *   3. extractAndValidatePatterns — 模式感知语法
- *   4. checkFencedBlocks      — 诗词围栏块结构
- *   5. checkTranslationPairing — 译文配对
- *   6. checkWithParser        — 解析器深度校验（同时生成 stats）
+ *   4. checkRubyBareAnnotation — 注音后紧随括号检测
+ *   5. checkFencedBlocks      — 诗词围栏块结构
+ *   6. checkTranslationPairing — 译文配对
+ *   7. checkWithParser        — 解析器深度校验（同时生成 stats）
  *
  * @param source  - .wyw 文件的完整源码字符串
  * @param options - 可选配置
@@ -766,6 +797,7 @@ export function validate(
   checkFrontmatter(lines, v);
   checkBracketBalance(lines, v);
   extractAndValidatePatterns(lines, v);
+  checkRubyBareAnnotation(lines, v);
   checkFencedBlocks(lines, v);
   checkTranslationPairing(lines, v);
   const stats = checkWithParser(source, v);
