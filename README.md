@@ -9,7 +9,7 @@ GitHub： https://github.com/BlackBoxRecorder/wyw
 
 运行：
 ```bash
-npx wyw build loushiming.wyw
+npx @timetickme/wyw build loushiming.wyw
 ```
 
 生成 HTML 如下：
