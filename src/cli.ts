@@ -170,7 +170,10 @@ function collectStats(source: string): {
 } {
   const annotations = (source.match(/\[[^\]]+\]\([^)]+\)/g) || []).length;
   const rubies = (source.match(/\{[^|{}]+\|[^}]+\}/g) || []).length;
-  const paragraphs = source.split("\n\n").filter((block) => {
+
+  // 移除诗词围栏块内容后再统计段落，避免诗句行被误计为段落
+  const bodyOnly = source.replace(/:::.*?\n[\s\S]*?\n:::/g, "").trim();
+  const paragraphs = bodyOnly.split("\n\n").filter((block) => {
     const t = block.trim();
     return (
       t && !t.startsWith("---") && !t.startsWith(">>") && !t.startsWith("#")

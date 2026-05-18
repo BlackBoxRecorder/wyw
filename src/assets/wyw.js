@@ -25,6 +25,12 @@
       article.classList.add("wyw--hide-translation");
       var btn = article.querySelector(".wyw-btn--translation");
       if (btn) btn.setAttribute("aria-pressed", "false");
+    } else if (showTrans === null) {
+      // 无缓存时，根据编译时设置的初始状态同步按钮
+      if (article.classList.contains("wyw--hide-translation")) {
+        var btn = article.querySelector(".wyw-btn--translation");
+        if (btn) btn.setAttribute("aria-pressed", "false");
+      }
     }
 
     // 字体大小

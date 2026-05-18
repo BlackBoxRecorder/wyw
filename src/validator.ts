@@ -462,6 +462,8 @@ function validateRubyAnnotatePattern(p: SyntaxPattern, v: Validator) {
  */
 function extractAndValidatePatterns(lines: string[], v: Validator) {
   // 正则（与 inline-parser 优先级一致）
+  // 注意：释义捕获组使用 * 量词（允许空值）以捕获潜在问题并告警，
+  // 这比 inline-parser 匹配更宽松，是有意为之的校验策略
   const RA_REGEX = /\[((?:\{[^}]+\})+)\]\(([^)]*)\)/g; // ruby_annotate 优先
   const RUBY_REGEX = /\{([^|{}]+)\|([^}]+)\}/g;
   const ANNO_REGEX = /\[([^\]]+)\]\(([^)]*)\)/g;
@@ -562,7 +564,8 @@ function extractAndValidatePatterns(lines: string[], v: Validator) {
  */
 function checkRubyBareAnnotation(lines: string[], v: Validator) {
   // 匹配 {字|拼音} 后紧跟 ( 的模式，但排除 [{字|拼音}] 的正确组合语法
-  const RUBY_PAREN_REGEX = /(?<!\[)\{([^|{}]+)\|([^}]+)\}\s*\(/g;
+  // 注：使用 matchAll + 手动检查前方是否有未配对的 [，因 V8 不支持变长负向后顾
+  const RUBY_PAREN_REGEX = /\{([^|{}]+)\|([^}]+)\}\s*\(/g;
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
@@ -614,8 +617,8 @@ function checkFencedBlocks(lines: string[], v: Validator) {
         if (type && type !== "poetry") {
           v.warn(i + 1, `围栏块类型为 '${type}'（目前仅支持 'poetry'）`);
         }
-      } else {
-        // 退出围栏块
+      } else if (trimmed === ":::") {
+        // 退出围栏块：仅精确匹配 ':::'，与解析器行为一致
         inFenced = false;
         closeCount++;
       }

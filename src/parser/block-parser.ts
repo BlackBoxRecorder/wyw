@@ -224,6 +224,18 @@ function parseBlocks(lines: string[]): RawBlockNode[] {
           continue;
         }
 
+        // 遇到块级标记（分隔线、标题、围栏），flush 当前段落并重新处理
+        if (
+          /^-{3,}$/.test(trimmed) ||
+          /^(#{1,3})\s/.test(trimmed) ||
+          trimmed.startsWith(":::")
+        ) {
+          flushParagraph();
+          state = IDLE;
+          i--; // 让当前行在 IDLE 状态下重新处理
+          continue;
+        }
+
         // 遇到译文行，先 flush 当前段落，然后切换到译文状态
         if (trimmed.startsWith(">>")) {
           flushParagraph();

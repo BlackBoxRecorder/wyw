@@ -25,14 +25,24 @@ export function parseFrontmatter(source: string): ParseFrontmatterResult {
     return { meta: defaultMeta, body: source };
   }
 
-  // 查找结束的 ---
-  const endIndex = trimmed.indexOf("\n---", 3);
-  if (endIndex === -1) {
+  // 按行查找结束的 ---（与校验器行为一致，允许前导空白）
+  const lines = trimmed.split("\n");
+  let endLine = -1;
+  for (let i = 1; i < lines.length; i++) {
+    if (lines[i].trim() === "---") {
+      endLine = i;
+      break;
+    }
+  }
+  if (endLine === -1) {
     return { meta: defaultMeta, body: source };
   }
 
-  const yamlBlock = trimmed.slice(3, endIndex).trim();
-  const body = trimmed.slice(endIndex + 4).trim(); // 跳过 \n---
+  const yamlBlock = lines.slice(1, endLine).join("\n").trim();
+  const body = lines
+    .slice(endLine + 1)
+    .join("\n")
+    .trim();
 
   // 简单的 YAML 键值解析（不支持嵌套）
   const meta: DocumentMeta = { ...defaultMeta };

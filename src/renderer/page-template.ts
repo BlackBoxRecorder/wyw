@@ -62,6 +62,7 @@ export function renderPage(options: RenderPageOptions): string {
     theme,
     articleClasses,
     body,
+    faviconPath: `${assetsPath}favicon.png`,
     cssTag: new Handlebars.SafeString(cssTag),
     jsTag: new Handlebars.SafeString(jsTag),
   });
