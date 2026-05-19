@@ -19,6 +19,7 @@ import type {
   InlineNode,
   PoetryHeading,
   PoetryLine,
+  SectionBreakNode,
 } from "./ast.js";
 import { parseInline } from "./inline-parser.js";
 import { parseFrontmatter } from "./frontmatter.js";
@@ -77,7 +78,7 @@ function parseBlocks(lines: string[]): RawBlockNode[] {
   let state: ParserState = IDLE;
 
   // buffer: 临时缓冲区，用于累积多行内容（段落、译文、引用、围栏块等）
-  let buffer: Array<string | PoetryHeading> = [];
+  let buffer: Array<string | PoetryHeading | SectionBreakNode> = [];
 
   // 围栏块相关变量
   let fencedType = ""; // 围栏块类型（如 poetry）
@@ -131,18 +132,19 @@ function parseBlocks(lines: string[]): RawBlockNode[] {
   function flushFenced(): void {
     const poetryLines: PoetryLine[] = [];
     for (const line of buffer) {
-      if (typeof line === "object" && line.type === "heading") {
-        poetryLines.push(line);
-      } else if (
-        typeof line === "string" &&
-        line.startsWith(">") &&
-        !line.startsWith(">>")
-      ) {
+      if (typeof line !== "string") {
+        // 非字符串类型：heading 或 section_break
+        if (line.type === "heading") {
+          poetryLines.push(line);
+        } else if (line.type === "section_break") {
+          poetryLines.push(line as SectionBreakNode);
+        }
+      } else if (line.startsWith(">") && !line.startsWith(">>")) {
         // 诗词块内的引用行：去除 > 前缀后作为 blockquote
         const content = line.slice(1).trim();
         poetryLines.push(createBlockquote(parseInline(content)));
       } else {
-        poetryLines.push(parseInline(line as string));
+        poetryLines.push(parseInline(line));
       }
     }
     blocks.push(createPoetryBlock(fencedTitle, fencedMeta, poetryLines));
@@ -308,6 +310,12 @@ function parseBlocks(lines: string[]): RawBlockNode[] {
         // 围栏内的元信息：:: text（注意：::: 是结束标记，这里排除）
         if (trimmed.startsWith("::") && !trimmed.startsWith(":::")) {
           fencedMeta = trimmed.slice(2).trim();
+          continue;
+        }
+
+        // 分隔线：---（三个或更多连字符）
+        if (/^-{3,}$/.test(trimmed)) {
+          buffer.push(createSectionBreak());
           continue;
         }
 

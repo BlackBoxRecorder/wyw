@@ -12,6 +12,7 @@ import type {
   PoetryHeading,
   PoetryLine,
   InlineNode,
+  SectionBreakNode,
 } from "../parser/ast.js";
 
 /**
@@ -121,7 +122,8 @@ function renderParagraphGroup(block: ParagraphGroupNode): string {
 type PoetrySegment =
   | { type: "verse"; lines: InlineNode[][] }
   | { type: "heading"; level: number; content: InlineNode[] }
-  | { type: "blockquote"; children: InlineNode[] };
+  | { type: "blockquote"; children: InlineNode[] }
+  | { type: "section_break" };
 
 function renderPoetryBlock(block: PoetryBlockNode): string {
   const lines: string[] = ['<div class="wyw-poetry">'];
@@ -164,6 +166,12 @@ function renderPoetryBlock(block: PoetryBlockNode): string {
         type: "blockquote",
         children: line.children,
       });
+    } else if (line.type === "section_break") {
+      if (currentSegment.length > 0) {
+        segments.push({ type: "verse", lines: currentSegment });
+        currentSegment = [];
+      }
+      segments.push({ type: "section_break" });
     }
   }
 
@@ -181,7 +189,13 @@ function renderPoetryBlock(block: PoetryBlockNode): string {
       lines.push(
         `  <blockquote><p>${renderInlineList(segment.children)}</p></blockquote>`,
       );
+    } else if (segment.type === "section_break") {
+      lines.push('  <hr class="wyw-hr">');
     } else {
+      // 跳过全空的 verse 段落
+      const hasContent = segment.lines.some((l) => renderInlineList(l) !== "");
+      if (!hasContent) continue;
+
       lines.push('  <p class="wyw-verse">');
       for (let i = 0; i < segment.lines.length; i++) {
         const lineContent = renderInlineList(segment.lines[i]);
