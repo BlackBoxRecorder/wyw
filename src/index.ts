@@ -31,6 +31,9 @@ export { parse } from "./parser/block-parser.js";
 export { renderBody } from "./renderer/html-renderer.js";
 export { renderPage } from "./renderer/page-template.js";
 export type { RenderPageOptions } from "./renderer/page-template.js";
+export { validate, formatValidationResult } from "./validator.js";
+export type { ValidationResult, ValidationIssue } from "./validator.js";
+export { createCli } from "./cli.js";
 export type {
   DocumentMeta,
   DocumentNode,

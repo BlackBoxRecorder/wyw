@@ -9,10 +9,14 @@ import {
 } from "node:fs";
 import { resolve, basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { createRequire } from "node:module";
 import { Command } from "commander";
 import { compile } from "./index.js";
 import type { CompileOptions } from "./index.js";
 import { validate, formatValidationResult } from "./validator.js";
+
+const require = createRequire(import.meta.url);
+const pkg = require("../package.json") as { version: string };
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ASSETS_DIR = join(__dirname, "assets");
@@ -28,7 +32,7 @@ interface BuildOptions {
 export function createCli(): Command {
   const program = new Command();
 
-  program.name("wyw").description("文言文标记语言编译器").version("0.1.0");
+  program.name("wyw").description("文言文标记语言编译器").version(pkg.version);
 
   program
     .command("build")

@@ -4,11 +4,19 @@
   "description": "文言文标记语言编译器 - 将 .wyw 文件编译为排版精美的 HTML 页面",
   "type": "module",
   "main": "./dist/index.js",
+  "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
+      "import": "./dist/index.js",
+      "require": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./validator": {
+      "types": "./dist/validator.d.ts",
+      "import": "./dist/validator.js",
+      "default": "./dist/validator.js"
     }
   },
   "bin": {
