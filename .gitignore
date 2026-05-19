@@ -10,9 +10,9 @@ yarn.lock
 examples/dist/
 examples/dist-inline/
 dist/
-*.html
 !examples/dist-inline/.gitkeep
-
+src/assets/wyw-browser.js
+test/demo
 # Environment variables
 .env
 .env.local

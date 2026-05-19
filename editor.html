@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>文言文编辑器</title>
+    <style>
+        /* ============================================================
+       编辑器布局样式
+       ============================================================ */
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+        }
+
+        html {
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .editor-toolbar {
+            display: flex;
+            gap: 8px;
+            padding: 10px 16px;
+            background: #2d2d2d;
+            border-bottom: 1px solid #444;
+            align-items: center;
+        }
+
+        .editor-btn {
+            padding: 6px 16px;
+            border: 1px solid #555;
+            border-radius: 4px;
+            background: #3a3a3a;
+            color: #ddd;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+
+        .editor-btn:hover {
+            background: #4a4a4a;
+        }
+
+        .editor-btn:active {
+            background: #555;
+        }
+
+        .editor-btn--primary {
+            background: #b34a4a;
+            border-color: #b34a4a;
+            color: #fff;
+        }
+
+        .editor-btn--primary:hover {
+            background: #c55a5a;
+        }
+
+        .editor-status {
+            margin-left: auto;
+            color: #999;
+            font-size: 12px;
+        }
+
+        .editor-container {
+            display: flex;
+            height: calc(100vh - 47px);
+        }
+
+        .editor-pane {
+            width: 50%;
+            border-right: 1px solid #ccc;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .editor-pane textarea {
+            flex: 1;
+            width: 100%;
+            border: none;
+            outline: none;
+            resize: none;
+            padding: 16px;
+            font-family: "JetBrains Mono", "Source Code Pro", "Menlo", monospace;
+            font-size: 14px;
+            line-height: 1.7;
+            tab-size: 2;
+            background: #1e1e1e;
+            color: #d4d4d4;
+        }
+
+        .preview-pane {
+            width: 50%;
+            overflow-y: auto;
+            background: var(--wyw-color-bg);
+        }
+
+        .preview-pane .wyw {
+            max-width: none;
+            margin: 0;
+            padding: 2rem 2.5rem 4rem;
+        }
+
+        /* 响应式：窄屏上下堆叠 */
+        @media (max-width: 768px) {
+            .editor-container {
+                flex-direction: column;
+            }
+
+            .editor-pane,
+            .preview-pane {
+                width: 100%;
+                height: 50%;
+            }
+
+            .editor-pane {
+                border-right: none;
+                border-bottom: 1px solid #ccc;
+            }
+        }
+
+        /* ============================================================
+       WYW 预览样式子集（来源于 src/assets/wyw.css）
+       ============================================================ */
+
+        /* CSS 变量 */
+        :root {
+            --wyw-font-size: 16px;
+            --wyw-font-size-large: 20px;
+            --wyw-font-size-small: 14px;
+            --wyw-font-size-xs: 10px;
+            --wyw-line-height: 1.8;
+            --wyw-line-height-dense: 1.5;
+            --wyw-line-height-loose: 2.4;
+            --wyw-letter-spacing: 0.05em;
+            --wyw-max-width: 42em;
+            --wyw-indent: 2em;
+            --wyw-grid-unit: calc(var(--wyw-font-size) * var(--wyw-line-height));
+            --wyw-font-song: "Heti Song", "Noto Serif SC", "Source Han Serif SC", "Source Han Serif", "Songti SC", "SimSun", serif;
+            --wyw-font-kai: "Heti Kai", "KaiTi", "STKaiti", "AR PL UKai CN", "FangSong", serif;
+            --wyw-font-hei: "Heti Hei", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+            --wyw-font-pinyin: "Helvetica Neue", Helvetica, Arial, sans-serif;
+            --wyw-color-text: hsl(30, 10%, 12%);
+            --wyw-color-text-light: hsl(30, 5%, 40%);
+            --wyw-color-text-muted: hsl(30, 5%, 55%);
+            --wyw-color-bg: hsl(40, 40%, 97%);
+            --wyw-color-bg-alt: hsl(40, 30%, 94%);
+            --wyw-color-accent: hsl(0, 65%, 48%);
+            --wyw-color-border: hsl(30, 15%, 85%);
+            --wyw-color-tooltip-bg: hsl(30, 10%, 15%);
+            --wyw-color-tooltip-text: hsl(40, 30%, 95%);
+        }
+
+        .preview-pane {
+            transition: background-color 0.3s ease;
+        }
+
+        /* 用户手动添加 dark class 可切换暗色 */
+        .preview-dark {
+            --wyw-color-text: hsl(40, 15%, 85%);
+            --wyw-color-text-light: hsl(40, 10%, 60%);
+            --wyw-color-text-muted: hsl(40, 5%, 48%);
+            --wyw-color-bg: hsl(30, 8%, 10%);
+            --wyw-color-bg-alt: hsl(30, 8%, 14%);
+            --wyw-color-accent: hsl(0, 50%, 60%);
+            --wyw-color-border: hsl(30, 5%, 25%);
+            --wyw-color-tooltip-bg: hsl(40, 20%, 88%);
+            --wyw-color-tooltip-text: hsl(30, 10%, 12%);
+        }
+
+        /* 字体大小档位 */
+        .wyw--font-md {
+            --wyw-font-size: 18px;
+            --wyw-font-size-large: 23px;
+            --wyw-font-size-small: 16px;
+            --wyw-font-size-xs: 11px;
+        }
+
+        .wyw--font-lg {
+            --wyw-font-size: 20px;
+            --wyw-font-size-large: 26px;
+            --wyw-font-size-small: 17px;
+            --wyw-font-size-xs: 12px;
+        }
+
+        /* 主容器 */
+        .wyw {
+            font-family: var(--wyw-font-song);
+            font-size: var(--wyw-font-size);
+            line-height: var(--wyw-line-height);
+            letter-spacing: var(--wyw-letter-spacing);
+            color: var(--wyw-color-text);
+            text-align: justify;
+            overflow-wrap: break-word;
+            transition: color 0.3s ease;
+        }
+
+        .wyw--annotation .wyw-content p {
+            line-height: var(--wyw-line-height-loose);
+        }
+
+        .wyw--annotation .wyw-verse {
+            line-height: 2;
+        }
+
+        /* 文档头部 */
+        .wyw-header {
+            text-align: center;
+            margin-bottom: calc(var(--wyw-grid-unit) * 2);
+            padding-bottom: var(--wyw-grid-unit);
+            border-bottom: 1px solid var(--wyw-color-border);
+        }
+
+        .wyw-header h1 {
+            font-family: var(--wyw-font-kai);
+            font-size: 2em;
+            font-weight: 700;
+            letter-spacing: 0.15em;
+            margin: 0 0 0.5em;
+            color: var(--wyw-color-text);
+        }
+
+        .wyw-meta {
+            font-size: var(--wyw-font-size-small);
+            color: var(--wyw-color-text-light);
+            letter-spacing: 0.1em;
+        }
+
+        .wyw-meta .wyw-dynasty {
+            font-family: var(--wyw-font-kai);
+        }
+
+        .wyw-meta .wyw-dynasty::after {
+            content: "\00B7";
+            margin: 0 0.3em;
+        }
+
+        .wyw-meta .wyw-author {
+            font-family: var(--wyw-font-kai);
+        }
+
+        /* 正文 */
+        .wyw-content {
+            margin-top: var(--wyw-grid-unit);
+        }
+
+        .wyw-content h2 {
+            font-family: var(--wyw-font-kai);
+            font-size: 1.5em;
+            font-weight: 600;
+            letter-spacing: 0.1em;
+            margin: calc(var(--wyw-grid-unit) * 1.5) 0 var(--wyw-grid-unit);
+            color: var(--wyw-color-text);
+        }
+
+        .wyw-content h3 {
+            font-family: var(--wyw-font-kai);
+            font-size: 1.25em;
+            font-weight: 600;
+            letter-spacing: 0.08em;
+            margin: var(--wyw-grid-unit) 0 calc(var(--wyw-grid-unit) * 0.5);
+            color: var(--wyw-color-text);
+        }
+
+        /* 段落 */
+        .wyw-para-group {
+            margin-bottom: calc(var(--wyw-grid-unit) * 0.8);
+        }
+
+        .wyw-para-group p:first-child {
+            text-indent: var(--wyw-indent);
+            margin: 0;
+        }
+
+        /* 译文 */
+        .wyw-translation {
+            font-family: var(--wyw-font-hei);
+            font-size: var(--wyw-font-size-small);
+            color: var(--wyw-color-text-muted);
+            line-height: var(--wyw-line-height-dense);
+            margin: 0.4em 0 0;
+            padding: 0.4em 0 0.4em 1em;
+            border-left: 2px solid var(--wyw-color-border);
+            text-indent: 0;
+            letter-spacing: 0.02em;
+            max-height: 200px;
+            opacity: 1;
+            overflow: hidden;
+            transition: max-height 0.35s ease, opacity 0.35s ease, margin 0.35s ease, padding 0.35s ease;
+        }
+
+        .wyw--hide-translation .wyw-translation {
+            max-height: 0;
+            opacity: 0;
+            margin-top: 0;
+            margin-bottom: 0;
+            padding-top: 0;
+            padding-bottom: 0;
+            border-color: transparent;
+        }
+
+        /* Ruby 注音 */
+        ruby {
+            ruby-align: center;
+        }
+
+        ruby rt {
+            font-family: var(--wyw-font-pinyin);
+            font-size: 0.5em;
+            color: var(--wyw-color-text-light);
+            letter-spacing: normal;
+            font-weight: normal;
+        }
+
+        ruby rp {
+            display: none;
+        }
+
+        /* 注释 tooltip */
+        .wyw-annotate {
+            position: relative;
+            cursor: help;
+            border-bottom: none;
+        }
+
+        .wyw-annotate::after {
+            content: "";
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background-color: var(--wyw-color-accent);
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        .wyw-annotate:hover::after {
+            opacity: 1;
+        }
+
+        .wyw-annotate::before {
+            content: attr(data-note);
+            position: absolute;
+            bottom: calc(100% + 10px);
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--wyw-color-tooltip-bg);
+            color: var(--wyw-color-tooltip-text);
+            font-family: var(--wyw-font-hei);
+            font-size: var(--wyw-font-size-xs);
+            line-height: 1.5;
+            letter-spacing: normal;
+            text-align: left;
+            text-indent: 0;
+            padding: 4px 8px;
+            border-radius: 4px;
+            white-space: normal;
+            width: max-content;
+            max-width: 20em;
+            min-width: 3em;
+            z-index: 100;
+            pointer-events: none;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.2s ease, visibility 0.2s ease;
+            filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.15));
+        }
+
+        .wyw-annotate:hover::before,
+        .wyw-annotate:focus::before {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        /* 着重 */
+        em {
+            font-style: normal;
+            font-weight: 700;
+            font-family: var(--wyw-font-hei);
+        }
+
+        /* 诗歌 */
+        .wyw-poetry {
+            text-align: center;
+            margin: calc(var(--wyw-grid-unit) * 2) 0;
+        }
+
+        .wyw-poetry-title {
+            font-family: var(--wyw-font-kai);
+            font-size: 2em;
+            font-weight: 700;
+            margin: 0 0 0.5em;
+            letter-spacing: 0.15em;
+        }
+
+        .wyw-poetry .wyw-meta {
+            font-size: var(--wyw-font-size-small);
+            color: var(--wyw-color-text-light);
+            letter-spacing: 0.1em;
+            margin: 0 0 0.5em;
+        }
+
+        .wyw-verse {
+            font-size: var(--wyw-font-size-large);
+            line-height: 2;
+            margin: 0.8em 0 0;
+            text-indent: 0;
+            letter-spacing: 0.08em;
+            padding-top: var(--wyw-grid-unit);
+            border-top: 1px solid var(--wyw-color-border);
+        }
+
+        .wyw-poetry-section-title+.wyw-verse {
+            border-top: none;
+            padding-top: 0;
+        }
+
+        .wyw-poetry-section-title {
+            font-family: var(--wyw-font-kai);
+            font-size: 1.3em;
+            font-weight: 600;
+            letter-spacing: 0.1em;
+            margin: calc(var(--wyw-grid-unit) * 1) 0 calc(var(--wyw-grid-unit) * 0.5);
+            color: var(--wyw-color-text);
+        }
+
+        /* 引用 */
+        blockquote {
+            margin: var(--wyw-grid-unit) 0;
+            padding: 0.5em 0 0.5em 1.2em;
+            border-left: 3px solid var(--wyw-color-accent);
+            color: var(--wyw-color-text-light);
+        }
+
+        blockquote p {
+            margin: 0;
+            text-indent: 0;
+        }
+
+        /* 分隔线 */
+        .wyw-hr {
+            border: none;
+            height: 1px;
+            background: var(--wyw-color-border);
+            margin: calc(var(--wyw-grid-unit) * 1.5) auto;
+            max-width: 6em;
+        }
+
+        /* 校对日期 */
+        .wyw-proofread {
+            text-align: right;
+            font-size: var(--wyw-font-size-xs);
+            color: var(--wyw-color-text-muted);
+            margin-top: calc(var(--wyw-grid-unit) * 2);
+            letter-spacing: 0.02em;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="editor-toolbar">
+        <button class="editor-btn" id="btn-ruby" title="选择汉字后点击注音">注音</button>
+        <button class="editor-btn" id="btn-annotate" title="选择文字后点击注释">注释</button>
+        <button class="editor-btn editor-btn--primary" id="btn-preview" title="手动预览">预览</button>
+        <button class="editor-btn" id="btn-theme" title="切换明暗主题">主题</button>
+        <span class="editor-status" id="status">就绪</span>
+    </div>
+    <div class="editor-container">
+        <div class="editor-pane">
+            <textarea id="editor" spellcheck="false"></textarea>
+        </div>
+        <div class="preview-pane" id="preview-pane">
+            <article class="wyw wyw--ancient wyw--annotation" id="preview">
+                <p style="color: var(--wyw-color-text-muted); text-align: center; padding-top: 4rem;">在左侧编辑 .wyw
+                    源码，右侧实时预览</p>
+            </article>
+        </div>
+    </div>
+
+    <script type="module">
+        // ============================================================
+        //  导入
+        // ============================================================
+        import { pinyin } from "https://esm.sh/pinyin-pro@3.25.0";
+        import { parse, renderBody } from "./src/assets/wyw-browser.js";
+
+        // ============================================================
+        //  DOM 引用
+        // ============================================================
+        const textarea = document.getElementById("editor");
+        const previewEl = document.getElementById("preview");
+        const previewPane = document.getElementById("preview-pane");
+        const statusEl = document.getElementById("status");
+        const btnRuby = document.getElementById("btn-ruby");
+        const btnAnnotate = document.getElementById("btn-annotate");
+        const btnPreview = document.getElementById("btn-preview");
+        const btnTheme = document.getElementById("btn-theme");
+
+        let isDark = false;
+
+        // ============================================================
+        //  初始样例内容
+        // ============================================================
+        textarea.value = `---
+title: 陋室铭
+author: 刘禹锡
+dynasty: 唐
+---
+
+山不在高，有仙则名。水不在深，有龙则灵。
+[陋室](简陋的屋子)，惟吾德馨。
+>> 山不在于有多高，有了仙人居住就会出名。水不在于有多深，有了龙的存在就会有灵气。
+>> 这是一间简陋的屋子，只因我的品德高尚就不感到简陋了。
+
+苔痕上阶绿，草色入帘青。
+谈笑有[鸿儒](博学的人)，往来无[白丁](没有功名、学问的平民)。可以调素琴，阅[金经](用泥金书写的佛经)。
+无丝竹之乱耳，无案牍之劳形。
+>> 苔藓的痕迹蔓延到台阶上，呈现出一片碧绿；草色映入竹帘，使室内染上青色。在这里谈笑的都是渊博的大学者，往来的没有知识浅薄的人。
+>> 可以弹奏不加装饰的古琴，阅读用泥金书写的佛经。没有嘈杂的音乐扰乱听觉，没有繁重的官府公文劳累身体。
+
+> 陋室铭 — 刘禹锡`;
+
+        // ============================================================
+        //  预览渲染
+        // ============================================================
+        function doPreview() {
+            try {
+                const source = textarea.value;
+                const doc = parse(source);
+                const html = renderBody(doc);
+                previewEl.innerHTML = html;
+                updateStatus(`${textarea.value.length} 字符 · ${(textarea.value.match(/\n/g) || []).length + 1} 行`);
+            } catch (e) {
+                previewEl.innerHTML = `<p style="color: var(--wyw-color-accent); padding: 2rem;">渲染错误：${e.message}</p>`;
+                updateStatus("渲染失败");
+            }
+        }
+
+        function updateStatus(msg) {
+            statusEl.textContent = msg;
+        }
+
+        // debounce 自动预览
+        function debounce(fn, ms) {
+            let timer;
+            return function (...args) {
+                clearTimeout(timer);
+                timer = setTimeout(() => fn.apply(this, args), ms);
+            };
+        }
+        const autoPreview = debounce(doPreview, 300);
+
+        // ============================================================
+        //  注音按钮
+        // ============================================================
+        btnRuby.addEventListener("click", async () => {
+            const start = textarea.selectionStart;
+            const end = textarea.selectionEnd;
+            if (start === end) {
+                updateStatus("请先选中需要注音的汉字");
+                return;
+            }
+
+            const selected = textarea.value.slice(start, end);
+            const chars = [...selected]; // 正确处理 Unicode 字符（含多字节）
+
+            // 逐字符处理，跳过非汉字和已有标记的内容
+            const resultParts = [];
+            let i = 0;
+            while (i < chars.length) {
+                const ch = chars[i];
+
+                // 检测是否在一个 { 块内部
+                if (ch === "{") {
+                    // 收集整个 { } 块
+                    let block = "";
+                    let depth = 0;
+                    while (i < chars.length) {
+                        if (chars[i] === "{") depth++;
+                        if (chars[i] === "}") depth--;
+                        block += chars[i++];
+                        if (depth === 0) break;
+                    }
+                    resultParts.push(block);
+                    continue;
+                }
+
+                // 判断是否为汉字（CJK 统一表意文字）
+                if (/[\u4e00-\u9fff]/.test(ch)) {
+                    try {
+                        const py = pinyin(ch, { toneType: "symbol" });
+                        resultParts.push(`{${ch}|${py}}`);
+                    } catch {
+                        resultParts.push(ch);
+                    }
+                } else {
+                    resultParts.push(ch);
+                }
+                i++;
+            }
+
+            const result = resultParts.join("");
+            textarea.setRangeText(result, start, end, "end");
+            updateStatus(`已注音 ${resultParts.filter(p => p.startsWith("{")).length} 字`);
+            autoPreview();
+        });
+
+        // ============================================================
+        //  注释按钮
+        // ============================================================
+        btnAnnotate.addEventListener("click", () => {
+            const start = textarea.selectionStart;
+            const end = textarea.selectionEnd;
+            if (start === end) {
+                updateStatus("请先选中需要注释的文字");
+                return;
+            }
+
+            const selected = textarea.value.slice(start, end);
+            const hasRuby = /\{[^}]+\}/.test(selected);
+
+            const note = prompt(hasRuby
+                ? "请输入注释（释义），所选文字已包含注音标记："
+                : "请输入注释（释义）："
+            );
+
+            if (note === null || note.trim() === "") {
+                updateStatus("已取消注释");
+                return;
+            }
+
+            const trimmedNote = note.trim();
+
+            // 将所选文字标准化：每个字符都用大括号括起来
+            // 已有 {字|拼音} 格式的保持不变，纯字符补为 {字}
+            let normalized = "";
+            let i = 0;
+            while (i < selected.length) {
+                if (selected[i] === "{") {
+                    // 收集完整的 { } 块
+                    let block = "";
+                    let depth = 0;
+                    while (i < selected.length) {
+                        if (selected[i] === "{") depth++;
+                        if (selected[i] === "}") depth--;
+                        block += selected[i++];
+                        if (depth === 0) break;
+                    }
+                    normalized += block;
+                } else {
+                    normalized += `{${selected[i]}}`;
+                    i++;
+                }
+            }
+
+            const replacement = `[${normalized}](${trimmedNote})`;
+
+            textarea.setRangeText(replacement, start, end, "end");
+            updateStatus(`已添加注释：${trimmedNote}`);
+            autoPreview();
+        });
+
+        // ============================================================
+        //  手动预览按钮
+        // ============================================================
+        btnPreview.addEventListener("click", doPreview);
+
+        // ============================================================
+        //  主题切换
+        // ============================================================
+        btnTheme.addEventListener("click", () => {
+            isDark = !isDark;
+            if (isDark) {
+                previewPane.classList.add("preview-dark");
+                btnTheme.textContent = "浅色";
+            } else {
+                previewPane.classList.remove("preview-dark");
+                btnTheme.textContent = "主题";
+            }
+            updateStatus(isDark ? "已切换为暗色主题" : "已切换为浅色主题");
+        });
+
+        // ============================================================
+        //  自动预览
+        // ============================================================
+        textarea.addEventListener("input", autoPreview);
+
+        // ============================================================
+        //  键盘快捷键
+        // ============================================================
+        textarea.addEventListener("keydown", (e) => {
+            // Cmd/Ctrl + Enter = 手动预览
+            if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+                e.preventDefault();
+                doPreview();
+            }
+            // Cmd/Ctrl + R = 注音
+            if ((e.metaKey || e.ctrlKey) && e.key === "r") {
+                e.preventDefault();
+                btnRuby.click();
+            }
+            // Cmd/Ctrl + N = 注释
+            if ((e.metaKey || e.ctrlKey) && e.key === "n") {
+                e.preventDefault();
+                btnAnnotate.click();
+            }
+        });
+
+        // ============================================================
+        //  初始渲染
+        // ============================================================
+        doPreview();
+        updateStatus("就绪");
+    </script>
+</body>
+
+</html>

@@ -17,6 +17,7 @@
   "scripts": {
     "prepare:assets": "cp node_modules/heti/umd/heti-addon.min.js src/assets/ 2>/dev/null || true",
     "build": "rm -rf dist && tsc && npm run build:assets && cp src/templates/*.hbs dist/templates/",
+    "build:browser": "esbuild src/browser/wyw-browser.ts --bundle --format=esm --outfile=src/assets/wyw-browser.js",
     "build:assets": "mkdir -p dist/assets && cp src/assets/*.css src/assets/*.js src/assets/*.png dist/assets/",
     "build:examples": "npm run build && node bin/wyw.js build examples/*.wyw -o examples/dist",
     "dev": "tsc --watch",
@@ -62,6 +63,7 @@
   },
   "devDependencies": {
     "@types/node": "^25.6.0",
+    "esbuild": "^0.28.0",
     "heti": "^0.9.6",
     "tsx": "^4.21.0",
     "typescript": "^6.0.3"
