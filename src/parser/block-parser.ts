@@ -129,12 +129,22 @@ function parseBlocks(lines: string[]): RawBlockNode[] {
    * 围栏块用于诗词等特殊格式，每行独立解析保留换行结构
    */
   function flushFenced(): void {
-    const poetryLines: PoetryLine[] = buffer.map((line) => {
+    const poetryLines: PoetryLine[] = [];
+    for (const line of buffer) {
       if (typeof line === "object" && line.type === "heading") {
-        return line;
+        poetryLines.push(line);
+      } else if (
+        typeof line === "string" &&
+        line.startsWith(">") &&
+        !line.startsWith(">>")
+      ) {
+        // 诗词块内的引用行：去除 > 前缀后作为 blockquote
+        const content = line.slice(1).trim();
+        poetryLines.push(createBlockquote(parseInline(content)));
+      } else {
+        poetryLines.push(parseInline(line as string));
       }
-      return parseInline(line as string);
-    });
+    }
     blocks.push(createPoetryBlock(fencedTitle, fencedMeta, poetryLines));
     buffer = [];
     fencedType = "";

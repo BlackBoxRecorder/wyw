@@ -120,7 +120,8 @@ function renderParagraphGroup(block: ParagraphGroupNode): string {
 
 type PoetrySegment =
   | { type: "verse"; lines: InlineNode[][] }
-  | { type: "heading"; level: number; content: InlineNode[] };
+  | { type: "heading"; level: number; content: InlineNode[] }
+  | { type: "blockquote"; children: InlineNode[] };
 
 function renderPoetryBlock(block: PoetryBlockNode): string {
   const lines: string[] = ['<div class="wyw-poetry">'];
@@ -137,7 +138,7 @@ function renderPoetryBlock(block: PoetryBlockNode): string {
     );
   }
 
-  // 将 lines 按 heading 分段，每段 verse 单独用 <p> 包裹
+  // 将 lines 按 heading/blockquote 分段
   const segments: PoetrySegment[] = [];
   let currentSegment: InlineNode[][] = [];
 
@@ -154,6 +155,15 @@ function renderPoetryBlock(block: PoetryBlockNode): string {
         level: line.level,
         content: line.content,
       });
+    } else if (line.type === "blockquote") {
+      if (currentSegment.length > 0) {
+        segments.push({ type: "verse", lines: currentSegment });
+        currentSegment = [];
+      }
+      segments.push({
+        type: "blockquote",
+        children: line.children,
+      });
     }
   }
 
@@ -166,6 +176,10 @@ function renderPoetryBlock(block: PoetryBlockNode): string {
       const tag = `h${segment.level + 1}`;
       lines.push(
         `  <${tag} class="wyw-poetry-section-title">${renderInlineList(segment.content)}</${tag}>`,
+      );
+    } else if (segment.type === "blockquote") {
+      lines.push(
+        `  <blockquote><p>${renderInlineList(segment.children)}</p></blockquote>`,
       );
     } else {
       lines.push('  <p class="wyw-verse">');

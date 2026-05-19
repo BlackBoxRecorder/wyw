@@ -398,6 +398,11 @@ blockquote {
   color: var(--wyw-color-text-light);
 }
 
+/* 诗词块内的引用靠左对齐，不继承诗词块的居中 */
+.wyw-poetry blockquote {
+  text-align: left;
+}
+
 blockquote p {
   margin: 0;
   text-indent: 0;

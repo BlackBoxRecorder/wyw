@@ -86,7 +86,7 @@ export interface PoetryHeading {
   content: InlineNode[];
 }
 
-export type PoetryLine = InlineNode[] | PoetryHeading;
+export type PoetryLine = InlineNode[] | PoetryHeading | BlockquoteNode;
 
 export interface PoetryBlockNode {
   type: "poetry_block";
